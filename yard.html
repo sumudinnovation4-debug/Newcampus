@@ -1251,10 +1251,16 @@ window.CP.uploadToCloudinary = function (file, { folder = 'camplugie/listings', 
     xhr.onload = () => {
       let payload = {};
       try { payload = JSON.parse(xhr.responseText || '{}'); } catch {}
-      if (xhr.status >= 200 && xhr.status < 300 && payload.secure_url) resolve(payload.secure_url);
-      else reject(new Error(payload?.error?.message || 'Upload failed — check your Cloudinary upload preset.'));
+      console.log('Cloudinary upload response:', xhr.status, payload);
+      if (xhr.status >= 200 && xhr.status < 300 && payload.secure_url) { resolve(payload.secure_url); return; }
+      const cloudinaryMsg = payload?.error?.message;
+      reject(new Error(
+        cloudinaryMsg
+          ? `Cloudinary: ${cloudinaryMsg}`
+          : `Upload failed (HTTP ${xhr.status}). Most likely cause: the "${window.CP.CLOUDINARY_UPLOAD_PRESET}" upload preset in your Cloudinary dashboard doesn't exist or isn't set to "Unsigned" mode (Settings → Upload → Upload presets).`
+      ));
     };
-    xhr.onerror = () => reject(new Error('Network upload failed.'));
+    xhr.onerror = () => reject(new Error('Network upload failed — couldn\u2019t reach Cloudinary at all. Check your internet connection.'));
     xhr.send(formData);
   });
 };
@@ -1680,9 +1686,15 @@ document.getElementById('composeSubmitBtn').addEventListener('click', async () =
   }
 
   submitBtn.textContent = 'Posting…';
+
+  let postType = 'text';
+  if (media_types.includes('video')) postType = 'video';
+  else if (media_types.includes('image')) postType = 'image';
+  if (media_types.length > 0 && body) postType = 'mixed';
+
   const { error } = await window.sb.from('posts').insert({
     author_id: myUserId, university_id: currentUniversityId,
-    body, media_urls, media_types,
+    content: body || null, media_urls, media_types, post_type: postType,
     created_at: new Date().toISOString(),
   });
 
@@ -1702,9 +1714,14 @@ function uploadVideoToCloudinary(file) {
     formData.append('upload_preset', window.CP.CLOUDINARY_UPLOAD_PRESET);
     formData.append('folder', `camplugie/posts/${myUserId}`);
     fetch(`https://api.cloudinary.com/v1_1/${window.CP.CLOUDINARY_CLOUD_NAME}/video/upload`, { method: 'POST', body: formData })
-      .then(r => r.json())
-      .then(payload => payload.secure_url ? resolve(payload.secure_url) : reject(new Error(payload?.error?.message || 'Video upload failed.')))
-      .catch(reject);
+      .then(async r => {
+        const payload = await r.json().catch(() => ({}));
+        console.log('Cloudinary video upload response:', r.status, payload);
+        if (payload.secure_url) { resolve(payload.secure_url); return; }
+        const cloudinaryMsg = payload?.error?.message;
+        reject(new Error(cloudinaryMsg ? `Cloudinary: ${cloudinaryMsg}` : `Video upload failed (HTTP ${r.status}). Check that the "${window.CP.CLOUDINARY_UPLOAD_PRESET}" preset allows unsigned uploads and video resource type.`));
+      })
+      .catch(() => reject(new Error('Network upload failed — couldn\u2019t reach Cloudinary. Check your internet connection.')));
   });
 }
 
