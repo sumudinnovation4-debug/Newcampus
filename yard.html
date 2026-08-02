@@ -1339,13 +1339,25 @@ async function loadFeed(universityId) {
   const feed = document.getElementById('feed');
   feed.innerHTML = `<div style="text-align:center;padding:30px;color:var(--text3);font-size:13px;">Loading feed…</div>`;
 
-  const { data, error } = await window.sb
+  let { data, error } = await window.sb
     .from('posts')
     .select(window.CP.POST_SELECT)
     .eq('university_id', universityId)
     .order('featured', { ascending: false })
     .order('created_at', { ascending: false })
     .limit(30);
+
+  // Fall back gracefully if the 'featured' column doesn't exist yet on this
+  // database (run the migration to get pinning; this keeps the feed working either way).
+  if (error && /featured/i.test(error.message || '')) {
+    console.warn('posts.featured column missing — loading feed without pin-sort. Run the admin migration to enable pinning.');
+    ({ data, error } = await window.sb
+      .from('posts')
+      .select(window.CP.POST_SELECT)
+      .eq('university_id', universityId)
+      .order('created_at', { ascending: false })
+      .limit(30));
+  }
 
   if (error) {
     console.error('Feed load error:', error);
@@ -1487,7 +1499,7 @@ document.getElementById('composeSubmitBtn').addEventListener('click', async () =
   });
 
   submitBtn.textContent = 'Post';
-  if (error) { console.error('Post create error:', error); submitBtn.disabled = false; alert('Could not post — try again.'); return; }
+  if (error) { console.error('Post create error:', error); submitBtn.disabled = false; alert(`Could not post: ${error.message || 'unknown error'}`); return; }
 
   closeCompose();
   loadFeed(currentUniversityId);
