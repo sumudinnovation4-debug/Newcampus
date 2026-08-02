@@ -339,24 +339,7 @@ img { max-width: 100%; display: block; }
 .cp-page-header h1 { font-size: 18px; font-weight: 700; }
 .cp-page-header .brand-sub { font-size: 11.5px; color: var(--text3); font-weight: 500; margin-top: 1px; }
 
-/* ===== Post / feed card (Yard) ===== */
-.post-card {
-  margin: 12px 16px 0;
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  padding: 14px;
-}
-.post-card.pinned { background: linear-gradient(135deg, var(--brand-dark), var(--brand) 130%); border: none; }
-.post-card.pinned .post-meta, .post-card.pinned .post-body { color: rgba(255,255,255,0.9); }
-.post-card.pinned .post-name { color: #fff; }
-.post-eyebrow {
-  display: flex; align-items: center; gap: 6px;
-  font-size: 11px; font-weight: 800; letter-spacing: .04em; text-transform: uppercase;
-  color: rgba(255,255,255,0.85);
-  margin-bottom: 10px;
-}
-.post-author { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+/* ===== Post / feed card (Yard) — X-style ===== */
 .avatar {
   width: 40px; height: 40px; border-radius: 50%; flex-shrink: 0;
   background: linear-gradient(135deg, var(--brand), var(--brand-dark));
@@ -364,22 +347,95 @@ img { max-width: 100%; display: block; }
   font-weight: 700; font-size: 13px; color: #fff; overflow: hidden;
 }
 .avatar img { width: 100%; height: 100%; object-fit: cover; }
-.post-name { font-weight: 700; font-size: 14px; }
-.post-meta { font-size: 12px; color: var(--text3); margin-top: 1px; }
-.post-body { font-size: 14px; line-height: 1.5; color: var(--text2); }
-.post-actions { display: flex; align-items: center; gap: 18px; margin-top: 12px; }
-.post-action { display: flex; align-items: center; gap: 5px; font-size: 12.5px; font-weight: 700; color: var(--text3); background: none; border: none; cursor: pointer; }
-.post-action svg { width: 16px; height: 16px; }
-.post-action.active { color: var(--accent); }
-.post-action.liked { color: #EC4899; }
 
-.post-media { margin: 10px 0; border-radius: 12px; overflow: hidden; }
-.post-media img, .post-media video { width: 100%; max-height: 380px; object-fit: cover; display: block; }
-.post-media.grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 3px; }
-.post-media.grid-2 img, .post-media.grid-2 video { max-height: 200px; }
-.post-media.grid-3 { display: grid; grid-template-columns: 1fr 1fr; gap: 3px; }
-.post-media.grid-3 > *:first-child { grid-row: span 2; }
-.post-media.grid-3 img, .post-media.grid-3 video { max-height: 180px; height: 100%; }
+.post-card {
+  display: flex; gap: 11px;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border);
+  background: none; border-radius: 0; margin: 0;
+  cursor: default;
+}
+.post-card .avatar { width: 42px; height: 42px; flex-shrink: 0; }
+.post-main { flex: 1; min-width: 0; }
+.post-header-row { display: flex; align-items: baseline; gap: 4px; flex-wrap: wrap; }
+.post-header-row .post-name { font-weight: 800; font-size: 15px; color: var(--text); }
+.post-header-row .post-handle, .post-header-row .post-dot, .post-header-row .post-time { color: var(--text3); font-size: 14px; }
+.post-eyebrow {
+  display: flex; align-items: center; gap: 6px;
+  font-size: 12px; font-weight: 800; color: var(--accent);
+  margin-bottom: 4px;
+}
+.post-body { font-size: 15px; line-height: 1.35; color: var(--text); margin-top: 2px; white-space: pre-wrap; word-break: break-word; }
+.post-actions {
+  display: flex; align-items: center; justify-content: space-between;
+  max-width: 320px; margin-top: 10px; margin-left: -8px;
+}
+.post-action {
+  display: flex; align-items: center; gap: 6px;
+  font-size: 13px; font-weight: 600; color: var(--text3);
+  background: none; border: none; cursor: pointer;
+  padding: 6px 8px; border-radius: 999px;
+}
+.post-action svg { width: 17px; height: 17px; }
+.post-action.zap-btn.liked { color: var(--accent); font-weight: 800; }
+.post-action.comment-btn:active { color: var(--brand); }
+.post-action.repost-active { color: var(--money); }
+
+/* Pinned/official posts keep a highlighted treatment, distinct from the plain feed rows */
+.post-card.pinned {
+  background: linear-gradient(135deg, var(--brand-dark), var(--brand) 130%);
+  border-radius: var(--radius); margin: 10px 16px 0; border: none; padding: 14px;
+}
+.post-card.pinned .post-header-row .post-name,
+.post-card.pinned .post-header-row .post-handle,
+.post-card.pinned .post-header-row .post-dot,
+.post-card.pinned .post-header-row .post-time { color: rgba(255,255,255,0.92); }
+.post-card.pinned .post-body { color: rgba(255,255,255,0.95); }
+.post-card.pinned .post-eyebrow { color: #fff; }
+.post-card.pinned .post-action { color: rgba(255,255,255,0.75); }
+
+/* ---- Media: single image/video, or a Facebook-style swipeable carousel for multiple ---- */
+.post-media-wrap { margin-top: 10px; border-radius: 14px; overflow: hidden; border: 1px solid var(--border); }
+.post-media-single img { width: 100%; max-height: 420px; object-fit: cover; display: block; }
+
+.media-carousel { position: relative; }
+.media-carousel-track {
+  display: flex; overflow-x: auto; scroll-snap-type: x mandatory;
+  scrollbar-width: none; -webkit-overflow-scrolling: touch;
+}
+.media-carousel-track::-webkit-scrollbar { display: none; }
+.media-carousel-slide { flex: 0 0 100%; scroll-snap-align: center; }
+.media-carousel-slide img { width: 100%; max-height: 420px; object-fit: cover; display: block; }
+.media-carousel-dots {
+  position: absolute; bottom: 8px; left: 50%; transform: translateX(-50%);
+  display: flex; gap: 5px; background: rgba(9,7,20,.5); padding: 5px 8px; border-radius: 999px;
+}
+.media-carousel-dots span { width: 5px; height: 5px; border-radius: 50%; background: rgba(255,255,255,0.5); transition: background .15s, width .15s; }
+.media-carousel-dots span.active { background: #fff; width: 14px; border-radius: 3px; }
+.media-count-badge {
+  position: absolute; top: 8px; right: 8px; background: rgba(9,7,20,.6); color: #fff;
+  font-size: 10.5px; font-weight: 700; padding: 3px 8px; border-radius: 999px;
+}
+
+/* ---- Custom video player (no native controls) ---- */
+.custom-video-wrap { position: relative; background: #000; aspect-ratio: 16/10; }
+.custom-video-wrap video { width: 100%; height: 100%; object-fit: contain; display: block; background: #000; }
+.video-tap-target { position: absolute; inset: 0; }
+.video-center-btn {
+  position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+  width: 52px; height: 52px; border-radius: 50%; background: rgba(9,7,20,.55);
+  display: flex; align-items: center; justify-content: center; pointer-events: none;
+  opacity: 0; transition: opacity .15s;
+}
+.custom-video-wrap.paused .video-center-btn { opacity: 1; }
+.video-center-btn svg { width: 22px; height: 22px; color: #fff; }
+.video-mute-btn {
+  position: absolute; top: 8px; right: 8px; width: 30px; height: 30px; border-radius: 50%;
+  background: rgba(9,7,20,.55); border: none; color: #fff; display: flex; align-items: center; justify-content: center; cursor: pointer;
+}
+.video-mute-btn svg { width: 15px; height: 15px; }
+.video-progress-row { position: absolute; left: 8px; right: 8px; bottom: 8px; height: 3px; background: rgba(255,255,255,0.25); border-radius: 3px; cursor: pointer; }
+.video-progress-fill { height: 100%; width: 0%; background: var(--accent); border-radius: 3px; }
 
 /* Compose overlay */
 .compose-overlay { position: fixed; inset: 0; z-index: 100; background: var(--bg); display: flex; flex-direction: column; }
@@ -1201,10 +1257,16 @@ window.CP.uploadToCloudinary = function (file, { folder = 'camplugie/listings', 
     xhr.onload = () => {
       let payload = {};
       try { payload = JSON.parse(xhr.responseText || '{}'); } catch {}
-      if (xhr.status >= 200 && xhr.status < 300 && payload.secure_url) resolve(payload.secure_url);
-      else reject(new Error(payload?.error?.message || 'Upload failed — check your Cloudinary upload preset.'));
+      console.log('Cloudinary upload response:', xhr.status, payload);
+      if (xhr.status >= 200 && xhr.status < 300 && payload.secure_url) { resolve(payload.secure_url); return; }
+      const cloudinaryMsg = payload?.error?.message;
+      reject(new Error(
+        cloudinaryMsg
+          ? `Cloudinary: ${cloudinaryMsg}`
+          : `Upload failed (HTTP ${xhr.status}). Most likely cause: the "${window.CP.CLOUDINARY_UPLOAD_PRESET}" upload preset in your Cloudinary dashboard doesn't exist or isn't set to "Unsigned" mode (Settings → Upload → Upload presets).`
+      ));
     };
-    xhr.onerror = () => reject(new Error('Network upload failed.'));
+    xhr.onerror = () => reject(new Error('Network upload failed — couldn\u2019t reach Cloudinary at all. Check your internet connection.'));
     xhr.send(formData);
   });
 };
