@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Camplugie — Sell</title>
+<title>Camplugie — Swift</title>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Clash+Display:wght@500;600;700&family=Satoshi:wght@400;500;700;900&display=swap');
 
@@ -1032,68 +1032,22 @@ img { max-width: 100%; display: block; }
 <div class="app-shell">
 
   <header class="cp-page-header">
-    <a class="icon-btn" href="home.html" aria-label="Close">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+    <a class="icon-btn" href="home.html" aria-label="Back">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
     </a>
-    <h1>List something</h1>
+    <h1>Swift</h1>
     <span style="width:38px"></span>
   </header>
 
-  <form class="form-wrap" id="listingForm">
-    <div class="type-toggle">
-      <button type="button" class="btn active" data-type="product">📦 Product</button>
-      <button type="button" class="btn" data-type="service">🛠 Service</button>
-    </div>
+  <div id="closedBanner" style="display:none" class="swift-banner">
+    ⚠️ Swift delivery is currently unavailable on your campus.
+  </div>
 
-    <div class="form-group">
-      <label class="form-label">Photos</label>
-      <input type="file" id="photoInput" accept="image/*" multiple style="display:none">
-      <div class="upload-box" id="uploadBox">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
-        Tap to add up to 5 photos
-      </div>
-      <div class="photo-preview-row" id="photoPreviewRow"></div>
-    </div>
+  <!-- Active order as a buyer -->
+  <div id="activeOrderCard" style="display:none"></div>
 
-    <div class="form-group">
-      <label class="form-label">Title</label>
-      <input class="form-input" placeholder="e.g. CHM 101 Textbook, 3rd Ed." required>
-    </div>
-
-    <div class="form-group">
-      <label class="form-label">Description</label>
-      <textarea class="form-textarea" placeholder="Condition, what's included, why you're selling…"></textarea>
-    </div>
-
-    <div class="form-group">
-      <label class="form-label">Price (₦)</label>
-      <input class="form-input" type="number" placeholder="0.00">
-    </div>
-
-    <div class="form-group">
-      <label class="form-label">Category</label>
-      <select class="form-select">
-        <option>Textbooks</option>
-        <option>Electronics</option>
-        <option>Fashion</option>
-        <option>Food</option>
-        <option>Services</option>
-        <option>Other</option>
-      </select>
-    </div>
-
-    <div class="form-group">
-      <label class="form-label">Pickup location</label>
-      <input class="form-input" id="pickupLabelInput" placeholder="e.g. Awo Hall gate">
-      <div id="pickupMap" class="loc-picker-map"></div>
-      <div class="loc-picker-hint">Pin exactly where a Swift Runner should pick this up — makes delivery pricing accurate. Optional, but recommended.</div>
-      <button type="button" class="locate-btn" id="pickupLocateBtn" style="margin-top:6px;width:100%">📍 Use my current location</button>
-      <div class="loc-picker-status unset" id="pickupPinStatus">No pin set yet</div>
-      <input type="hidden" id="pickupLatField"><input type="hidden" id="pickupLngField">
-    </div>
-
-    <button type="submit" class="form-submit">Post listing</button>
-  </form>
+  <!-- Runner section: application form, pending state, or active runner dashboard -->
+  <div id="runnerSection"></div>
 
 </div>
 
@@ -1106,9 +1060,9 @@ img { max-width: 100%; display: block; }
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c3 3 9 3 12 0v-5"/></svg>
     Yard
   </a>
-  <button class="cp-nav-fab" data-tab="create">
+  <a class="cp-nav-fab" href="create.html" aria-label="Sell">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-  </button>
+  </a>
   <a class="cp-nav-item" href="notifications.html">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
     Notifications
@@ -1169,49 +1123,6 @@ window.CP.openOrCreateConversation = async function (meId, otherUserId, listingI
 
   if (error) { console.error('Conversation create error:', error); return null; }
   return created.id;
-};
-
-</script>
-<script>
-// Cloudinary unsigned upload — cloud name + upload preset are safe to expose
-// client-side (that's the point of an unsigned preset). The API key/secret
-// from your .env must NEVER go in browser code; they're not needed here.
-window.CP = window.CP || {};
-window.CP.CLOUDINARY_CLOUD_NAME = 'dkkowi2j9';
-window.CP.CLOUDINARY_UPLOAD_PRESET = 'campusplug';
-
-/**
- * Uploads a single file to Cloudinary and resolves with the secure_url.
- * onProgress(percent) is optional.
- */
-window.CP.uploadToCloudinary = function (file, { folder = 'camplugie/listings', onProgress } = {}) {
-  return new Promise((resolve, reject) => {
-    if (!file) { resolve(null); return; }
-    if (!file.type?.startsWith('image/')) { reject(new Error('Please select an image file.')); return; }
-    if (file.size > 8 * 1024 * 1024) { reject(new Error('Image must be under 8MB.')); return; }
-
-    const formData = new FormData();
-    formData.append('file', file);
-    formData.append('upload_preset', window.CP.CLOUDINARY_UPLOAD_PRESET);
-    if (folder) formData.append('folder', folder);
-
-    const xhr = new XMLHttpRequest();
-    xhr.open('POST', `https://api.cloudinary.com/v1_1/${window.CP.CLOUDINARY_CLOUD_NAME}/image/upload`);
-    xhr.upload.onprogress = (e) => { if (e.lengthComputable && onProgress) onProgress(Math.round((e.loaded / e.total) * 100)); };
-    xhr.onload = () => {
-      let payload = {};
-      try { payload = JSON.parse(xhr.responseText || '{}'); } catch {}
-      if (xhr.status >= 200 && xhr.status < 300 && payload.secure_url) resolve(payload.secure_url);
-      else reject(new Error(payload?.error?.message || 'Upload failed — check your Cloudinary upload preset.'));
-    };
-    xhr.onerror = () => reject(new Error('Network upload failed.'));
-    xhr.send(formData);
-  });
-};
-
-/** Uploads multiple files in parallel, returns array of secure_urls in the same order. */
-window.CP.uploadMultipleToCloudinary = function (files, opts) {
-  return Promise.all(Array.from(files).map(f => window.CP.uploadToCloudinary(f, opts)));
 };
 
 </script>
@@ -1303,141 +1214,684 @@ window.CP_signOut = async () => {
 
 </script>
 <script>
-let selectedFiles = [];
+const ACTIVE_STATUSES = ['pending', 'requested', 'searching', 'accepted', 'picked_up', 'delivered'];
+const TRANSPORTS = [['foot', '🚶 On foot'], ['bicycle', '🚲 Bicycle'], ['bike', '🛵 Bike'], ['car', '🚗 Car']];
+const STATUS_LABEL = {
+  pending: 'Waiting to be assigned a runner', searching: 'Looking for a nearby runner',
+  requested: 'A runner has been assigned', accepted: 'Runner is on the way to pick up',
+  picked_up: 'Runner has your item — on the way', delivered: 'Delivered — rate your runner',
+};
 
-const uploadBox = document.getElementById('uploadBox');
-const photoInput = document.getElementById('photoInput');
-const previewRow = document.getElementById('photoPreviewRow');
+let selectedTransport = 'foot';
+let myUniversityId = null;
+let myUserId = null;
 
-uploadBox.addEventListener('click', () => photoInput.click());
+function pinRow(order) {
+  return `
+    <div class="swift-pin-row">
+      <div class="swift-pin"><b>${order.pickup_pin || '----'}</b><span>Pickup PIN</span></div>
+      <div class="swift-pin"><b>${order.delivery_pin || '----'}</b><span>Delivery PIN</span></div>
+    </div>
+  `;
+}
 
-photoInput.addEventListener('change', () => {
-  const incoming = Array.from(photoInput.files || []);
-  const room = 5 - selectedFiles.length;
-  if (room <= 0) { alert('You can add up to 5 photos.'); photoInput.value = ''; return; }
-  selectedFiles = selectedFiles.concat(incoming.slice(0, room));
-  photoInput.value = ''; // allow re-selecting the same file later
-  renderPreviews();
+async function loadCampusOpen(universityId) {
+  const { data } = await window.sb.from('swift_settings').select('is_open').eq('university_id', universityId).maybeSingle();
+  const isOpen = data ? Boolean(data.is_open) : true;
+  document.getElementById('closedBanner').style.display = isOpen ? 'none' : 'flex';
+  return isOpen;
+}
+
+let currentStars = 0;
+
+function starRow(inputIdPrefix) {
+  return `
+    <div class="star-row" id="${inputIdPrefix}Stars">
+      ${[1, 2, 3, 4, 5].map(n => `<button type="button" class="star-btn" data-star="${n}">★</button>`).join('')}
+    </div>
+  `;
+}
+
+function bindStarRow(containerId, onChange) {
+  const row = document.getElementById(containerId);
+  row.addEventListener('click', (e) => {
+    const btn = e.target.closest('.star-btn');
+    if (!btn) return;
+    const n = Number(btn.dataset.star);
+    row.querySelectorAll('.star-btn').forEach(b => b.classList.toggle('active', Number(b.dataset.star) <= n));
+    onChange(n);
+  });
+}
+
+let activeMap = null;
+let mapPoll = null;
+
+function destroyMap() {
+  if (mapPoll) { clearInterval(mapPoll); mapPoll = null; }
+  if (activeMap) { activeMap.remove(); activeMap = null; }
+}
+
+// Draws a small Leaflet map with a dropoff pin and (optionally) a live runner pin,
+// polling swift_runners.current_lat/current_lng every 8s while the card is visible.
+function renderMap(containerId, order, pollRunnerId) {
+  destroyMap();
+  const el = document.getElementById(containerId);
+  if (!el) return;
+  const dropoff = (order.dropoff_lat && order.dropoff_lng) ? [order.dropoff_lat, order.dropoff_lng] : null;
+  const pickup = (order.pickup_lat && order.pickup_lng) ? [order.pickup_lat, order.pickup_lng] : null;
+  const center = dropoff || pickup || [7.5189, 4.5286]; // falls back to a campus-ish default
+
+  activeMap = L.map(containerId, { zoomControl: false, attributionControl: false }).setView(center, 15);
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', { maxZoom: 19 }).addTo(activeMap);
+
+  let runnerMarker = null;
+  if (dropoff) L.marker(dropoff, { title: 'Drop-off' }).addTo(activeMap).bindPopup('Drop-off');
+  if (pickup) L.marker(pickup, { title: 'Pickup' }).addTo(activeMap).bindPopup('Pickup');
+
+  async function pollRunner() {
+    if (!pollRunnerId) return;
+    const { data } = await window.sb.from('swift_runners').select('current_lat, current_lng').eq('id', pollRunnerId).maybeSingle();
+    if (!data?.current_lat) return;
+    const pos = [data.current_lat, data.current_lng];
+    if (runnerMarker) { runnerMarker.setLatLng(pos); } else { runnerMarker = L.circleMarker(pos, { radius: 8, color: '#FBBF24', fillColor: '#FBBF24', fillOpacity: 1 }).addTo(activeMap).bindPopup('Runner'); }
+  }
+  if (pollRunnerId) { pollRunner(); mapPoll = setInterval(pollRunner, 8000); }
+}
+
+function disputeButton(orderId, userId, againstId) {
+  return `<button class="swift-report-btn" data-order="${orderId}" data-against="${againstId || ''}">🚩 Report a problem</button>`;
+}
+
+document.addEventListener('click', async (e) => {
+  const btn = e.target.closest('.swift-report-btn');
+  if (!btn) return;
+  const reason = prompt('What went wrong? This goes to Camplugie support for review.');
+  if (!reason || !reason.trim()) return;
+  const { error } = await window.sb.from('swift_disputes').insert({
+    order_id: btn.dataset.order, opened_by: myUserId, against_id: btn.dataset.against || null,
+    reason: reason.trim(), status: 'open', created_at: new Date().toISOString(),
+  });
+  if (error) { console.error('Dispute error:', error); alert('Could not submit report — please try again.'); return; }
+  alert('Thanks — our team will review this.');
 });
 
-function renderPreviews() {
-  uploadBox.classList.toggle('has-photos', selectedFiles.length > 0);
-  uploadBox.innerHTML = selectedFiles.length
-    ? `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>${selectedFiles.length}/5 photos added — tap to add more`
-    : `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>Tap to add up to 5 photos`;
+function genPin() {
+  return String(Math.floor(1000 + Math.random() * 9000));
+}
 
-  previewRow.innerHTML = selectedFiles.map((file, i) => `
-    <div class="photo-thumb" data-index="${i}">
-      <img src="${URL.createObjectURL(file)}" alt="">
-      <button type="button" class="remove-photo-btn" data-index="${i}">✕</button>
+let linkedListing = null;
+
+async function loadLinkedListing() {
+  const listingId = new URLSearchParams(window.location.search).get('listing');
+  if (!listingId) return null;
+  const { data } = await window.sb.from('listings').select('id, title, pickup_label, pickup_lat, pickup_lng, seller_id, status, sold_to').eq('id', listingId).maybeSingle();
+  return data || null;
+}
+
+function renderListingLockedCard(reason) {
+  return `
+    <div class="swift-card">
+      <div class="swift-status-pill" style="background:rgba(251,191,36,0.12);color:var(--accent)">🔒 Not ready yet</div>
+      <h3>${linkedListing?.title || 'This item'}</h3>
+      <p>${reason}</p>
+    </div>
+  `;
+}
+
+function haversineMeters(a, b) {
+  if (!a || !b || a.lat == null || b.lat == null) return null;
+  const R = 6371000, toRad = (x) => (x * Math.PI) / 180;
+  const dLat = toRad(b.lat - a.lat), dLng = toRad(b.lng - a.lng);
+  const h = Math.sin(dLat / 2) ** 2 + Math.cos(toRad(a.lat)) * Math.cos(toRad(b.lat)) * Math.sin(dLng / 2) ** 2;
+  return 2 * R * Math.asin(Math.sqrt(h));
+}
+function prettyDistance(m) {
+  if (m == null) return '';
+  if (m < 950) return `${Math.round(m / 10) * 10} m`;
+  return `${(m / 1000).toFixed(1)} km`;
+}
+
+const BASE_FEE = 1000;         // flat base, always applies
+const PER_KM_FEE = 150;        // added per km beyond the first free km
+const OFF_CAMPUS_SURCHARGE = 1000; // added if pickup or drop-off is outside the campus radius
+const CAMPUS_RADIUS_METERS = 2000; // "on campus" = within this radius of the university's pinned center
+
+// Computes the delivery fee from the two pins. Falls back to just the base
+// fee if we don't have both points yet, or if the university has no center
+// coordinates set (see the campus radius note below).
+function computeFee(pickup, dropoff, campusCenter) {
+  let fee = BASE_FEE;
+  const breakdown = [{ label: 'Base fee', amount: BASE_FEE }];
+
+  const distM = haversineMeters(pickup, dropoff);
+  if (distM != null) {
+    const extraKm = Math.max(0, distM / 1000 - 1);
+    const distanceFee = Math.ceil(extraKm) * PER_KM_FEE;
+    if (distanceFee > 0) { fee += distanceFee; breakdown.push({ label: `Distance (${prettyDistance(distM)})`, amount: distanceFee }); }
+  }
+
+  if (campusCenter) {
+    const pickupOutside = pickup && haversineMeters(pickup, campusCenter) > CAMPUS_RADIUS_METERS;
+    const dropoffOutside = dropoff && haversineMeters(dropoff, campusCenter) > CAMPUS_RADIUS_METERS;
+    if (pickupOutside || dropoffOutside) { fee += OFF_CAMPUS_SURCHARGE; breakdown.push({ label: 'Off-campus surcharge', amount: OFF_CAMPUS_SURCHARGE }); }
+  }
+
+  return { fee, breakdown, distM };
+}
+
+function renderRequestForm() {
+  return `
+    <div class="swift-card">
+      <h3>Request a Swift delivery</h3>
+      <p>${linkedListing ? `For: <b>${linkedListing.title}</b> — a runner will pick it up from the seller and bring it to you.` : "Need something picked up and dropped off? Post a request and any nearby runner can accept it — you don't need to have bought anything through Camplugie."}</p>
+      <form id="requestOrderForm">
+        <div class="form-group">
+          <label class="form-label">Pickup location</label>
+          <input class="form-input" id="reqPickup" placeholder="e.g. Mama Put, behind Fajuyi Hall" value="${linkedListing?.pickup_label || ''}" required>
+          <div id="pickupMap" class="loc-picker-map"></div>
+          <div class="loc-picker-hint">Tap the map to drop a pin, or use your current location.</div>
+          <div style="display:flex;gap:8px;margin-top:6px">
+            <button type="button" class="locate-btn" id="pickupLocateBtn" style="flex:1">📍 Use my current location</button>
+          </div>
+          <div class="loc-picker-status unset" id="pickupPinStatus">No pin set yet</div>
+          <input type="hidden" id="reqPickupLat"><input type="hidden" id="reqPickupLng">
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Drop-off location</label>
+          <input class="form-input" id="reqDropoff" placeholder="e.g. Angola Hall, Room 14" required>
+          <div id="dropoffMap" class="loc-picker-map"></div>
+          <div class="loc-picker-hint">Tap the map to drop a pin, or use your current location.</div>
+          <div style="display:flex;gap:8px;margin-top:6px">
+            <button type="button" class="locate-btn" id="dropoffLocateBtn" style="flex:1">📍 Use my current location</button>
+          </div>
+          <div class="loc-picker-status unset" id="dropoffPinStatus">No pin set yet</div>
+          <input type="hidden" id="reqDropoffLat"><input type="hidden" id="reqDropoffLng">
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">What's this for?</label>
+          <textarea class="form-textarea" id="reqNote" placeholder="e.g. Pick up my food order and bring it to my room">${linkedListing ? `Deliver: ${linkedListing.title}` : ''}</textarea>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Delivery fee <span id="feeAutoBadge" class="fee-badge" style="display:none">Auto-calculated</span></label>
+          <div class="fee-breakdown" id="feeBreakdown">
+            <div class="fee-breakdown-row"><span>Base fee</span><span>${window.CP.fmtNaira(BASE_FEE)}</span></div>
+            <div class="fee-breakdown-row total"><span>Total</span><span id="feeTotalDisplay">${window.CP.fmtNaira(BASE_FEE)}</span></div>
+          </div>
+          <div class="loc-picker-hint">Drop both pins above for an accurate distance-based price. Starts at ₦1,000 and increases with distance, plus a surcharge if either point is off campus.</div>
+        </div>
+
+        <button type="submit" class="form-submit">Post request</button>
+      </form>
+    </div>
+  `;
+}
+
+let pickupPin = null;
+let dropoffPin = null;
+let pickupMap, dropoffMap, pickupMarker, dropoffMarker;
+let campusCenter = null;
+
+function initPicker(mapId, statusId, onSet) {
+  const startCenter = campusCenter ? [campusCenter.lat, campusCenter.lng] : [7.5189, 4.5286];
+  const map = L.map(mapId, { zoomControl: false, attributionControl: false }).setView(startCenter, 15);
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', { maxZoom: 19 }).addTo(map);
+  let marker = null;
+  map.on('click', (e) => {
+    const pin = { lat: e.latlng.lat, lng: e.latlng.lng };
+    if (marker) marker.setLatLng(e.latlng); else marker = L.marker(e.latlng).addTo(map);
+    document.getElementById(statusId).textContent = `📍 Pin set — ${pin.lat.toFixed(5)}, ${pin.lng.toFixed(5)}`;
+    document.getElementById(statusId).className = 'loc-picker-status set';
+    onSet(pin, marker);
+  });
+  return { map, setPin: (pin) => {
+    const latlng = [pin.lat, pin.lng];
+    if (marker) marker.setLatLng(latlng); else marker = L.marker(latlng).addTo(map);
+    map.setView(latlng, 16);
+    document.getElementById(statusId).textContent = `📍 Pin set — ${pin.lat.toFixed(5)}, ${pin.lng.toFixed(5)}`;
+    document.getElementById(statusId).className = 'loc-picker-status set';
+  }};
+}
+
+function updateFeeDisplay() {
+  const { fee, breakdown, distM } = computeFee(pickupPin, dropoffPin, campusCenter);
+  document.getElementById('feeAutoBadge').style.display = (pickupPin && dropoffPin) ? 'inline-flex' : 'none';
+  document.getElementById('feeBreakdown').innerHTML = breakdown.map(b =>
+    `<div class="fee-breakdown-row"><span>${b.label}</span><span>${window.CP.fmtNaira(b.amount)}</span></div>`
+  ).join('') + `<div class="fee-breakdown-row total"><span>Total</span><span>${window.CP.fmtNaira(fee)}</span></div>`;
+  return fee;
+}
+
+async function loadCampusCenter(universityId) {
+  const { data } = await window.sb.from('universities').select('latitude, longitude').eq('id', universityId).maybeSingle();
+  if (data?.latitude != null && data?.longitude != null) campusCenter = { lat: data.latitude, lng: data.longitude };
+}
+
+function bindRequestForm(userId, universityId) {
+  pickupPin = null; dropoffPin = null;
+
+  const pickupCtl = initPicker('pickupMap', 'pickupPinStatus', (pin) => { pickupPin = pin; document.getElementById('reqPickupLat').value = pin.lat; document.getElementById('reqPickupLng').value = pin.lng; updateFeeDisplay(); });
+  const dropoffCtl = initPicker('dropoffMap', 'dropoffPinStatus', (pin) => { dropoffPin = pin; document.getElementById('reqDropoffLat').value = pin.lat; document.getElementById('reqDropoffLng').value = pin.lng; updateFeeDisplay(); });
+
+  // If the pickup pin is already known from the linked listing, drop it immediately.
+  if (linkedListing?.pickup_lat != null && linkedListing?.pickup_lng != null) {
+    pickupPin = { lat: linkedListing.pickup_lat, lng: linkedListing.pickup_lng };
+    pickupCtl.setPin(pickupPin);
+    document.getElementById('reqPickupLat').value = pickupPin.lat;
+    document.getElementById('reqPickupLng').value = pickupPin.lng;
+  }
+
+  document.getElementById('pickupLocateBtn').addEventListener('click', () => {
+    if (!navigator.geolocation) { alert('Location not available on this device.'); return; }
+    navigator.geolocation.getCurrentPosition(
+      (pos) => { pickupPin = { lat: pos.coords.latitude, lng: pos.coords.longitude }; pickupCtl.setPin(pickupPin); document.getElementById('reqPickupLat').value = pickupPin.lat; document.getElementById('reqPickupLng').value = pickupPin.lng; updateFeeDisplay(); },
+      () => alert('Could not get your location — check permissions.')
+    );
+  });
+  document.getElementById('dropoffLocateBtn').addEventListener('click', () => {
+    if (!navigator.geolocation) { alert('Location not available on this device.'); return; }
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        dropoffPin = { lat: pos.coords.latitude, lng: pos.coords.longitude }; dropoffCtl.setPin(dropoffPin);
+        document.getElementById('reqDropoffLat').value = dropoffPin.lat; document.getElementById('reqDropoffLng').value = dropoffPin.lng;
+        if (!document.getElementById('reqDropoff').value) document.getElementById('reqDropoff').value = 'My current location';
+        updateFeeDisplay();
+      },
+      () => alert('Could not get your location — check permissions.')
+    );
+  });
+
+  updateFeeDisplay();
+
+  document.getElementById('requestOrderForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const pickup_place = document.getElementById('reqPickup').value.trim();
+    const dropoff_place = document.getElementById('reqDropoff').value.trim();
+    const note = document.getElementById('reqNote').value.trim();
+    const fee = updateFeeDisplay();
+    const pickup_lat = parseFloat(document.getElementById('reqPickupLat').value) || null;
+    const pickup_lng = parseFloat(document.getElementById('reqPickupLng').value) || null;
+    const dropoff_lat = parseFloat(document.getElementById('reqDropoffLat').value) || null;
+    const dropoff_lng = parseFloat(document.getElementById('reqDropoffLng').value) || null;
+
+    const btn = e.target.querySelector('.form-submit');
+    btn.disabled = true; btn.textContent = 'Posting…';
+
+    const { error } = await window.sb.from('swift_orders').insert({
+      university_id: universityId,
+      buyer_id: userId,
+      runner_id: null, // broadcast — open to any runner
+      status: 'searching',
+      errand_type: linkedListing ? 'listing_pickup' : 'errand',
+      listing_id: linkedListing?.id || null,
+      vendor_id: linkedListing?.seller_id || null,
+      fee,
+      pickup_place, dropoff_place,
+      pickup_lat, pickup_lng, dropoff_lat, dropoff_lng,
+      note: note || null,
+      pickup_pin: genPin(),
+      delivery_pin: genPin(),
+      created_at: new Date().toISOString(),
+    });
+
+    btn.disabled = false; btn.textContent = 'Post request';
+    if (error) { console.error('Order create error:', error); alert(`Could not post your request: ${error.message || 'please try again.'}`); return; }
+    loadActiveOrder(userId);
+  });
+}
+
+async function loadActiveOrder(userId) {
+  const card = document.getElementById('activeOrderCard');
+  const { data } = await window.sb
+    .from('swift_orders').select('*')
+    .eq('buyer_id', userId)
+    .in('status', ACTIVE_STATUSES)
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (!data) {
+    card.style.display = 'block';
+    card.className = 'swift-card';
+    if (linkedListing && linkedListing.status !== 'sold') {
+      card.innerHTML = renderListingLockedCard('The seller hasn\u2019t marked this as sold yet. Close the deal in chat first — once they mark it sold, you can request delivery here.');
+      return;
+    }
+    if (linkedListing && linkedListing.status === 'sold' && linkedListing.sold_to !== userId) {
+      card.innerHTML = renderListingLockedCard('This item was sold to someone else.');
+      return;
+    }
+    card.className = '';
+    card.innerHTML = renderRequestForm();
+    bindRequestForm(userId, myUniversityId);
+    return;
+  }
+  card.style.display = 'block';
+  card.className = 'swift-card';
+
+  if (data.status === 'delivered' && !data.buyer_rated) {
+    card.innerHTML = `
+      <div class="swift-status-pill">✅ Delivered</div>
+      <h3>Rate your runner</h3>
+      <p>How was your delivery?</p>
+      ${starRow('buyerRate')}
+      <textarea class="form-textarea" id="buyerRateComment" placeholder="Optional comment"></textarea>
+      <button class="form-submit" id="buyerRateSubmit" style="margin-top:10px">Submit rating &amp; finish</button>
+    `;
+    let stars = 0;
+    bindStarRow('buyerRateStars', (n) => { stars = n; });
+    document.getElementById('buyerRateSubmit').addEventListener('click', async () => {
+      if (!stars) { alert('Tap a star to rate.'); return; }
+      const comment = document.getElementById('buyerRateComment').value.trim();
+      await window.sb.from('swift_ratings').insert({
+        order_id: data.id, rater_id: userId, ratee_id: data.runner_id, role: 'runner',
+        stars, comment: comment || null, created_at: new Date().toISOString(),
+      });
+      await window.sb.from('swift_orders').update({ buyer_rated: true }).eq('id', data.id);
+      await window.sb.from('swift_orders').update({ status: 'completed', completed_at: new Date().toISOString() }).eq('id', data.id);
+      if (data.listing_id) {
+        await window.sb.from('listings').update({ is_available: false, status: 'sold', sold_to: userId, sold_at: new Date().toISOString() }).eq('id', data.listing_id);
+      }
+      loadActiveOrder(userId);
+    });
+    return;
+  }
+
+  card.innerHTML = `
+    <div class="swift-status-pill">🛵 ${STATUS_LABEL[data.status] || data.status}</div>
+    <h3>${data.pickup_place || data.dropoff_place || 'Your delivery'}</h3>
+    <p>${data.note || 'Track your delivery status here.'}</p>
+    ${pinRow(data)}
+    <div class="swift-map" id="buyerMap"></div>
+    <p style="margin-top:10px;font-size:11.5px;color:var(--text3)">Give the pickup PIN to whoever's handing off the item, and the delivery PIN to your runner once it arrives.</p>
+    ${disputeButton(data.id, userId, data.runner_id)}
+  `;
+  renderMap('buyerMap', data, data.runner_id);
+}
+
+function renderApplicationForm() {
+  return `
+    <div class="swift-card">
+      <h3>Become a Swift Runner</h3>
+      <p>Deliver items around campus and earn on your own schedule. We'll review your application before you can go online.</p>
+      <div class="transport-row" id="transportRow">
+        ${TRANSPORTS.map(([key, label]) => `<button type="button" class="transport-pill${key === selectedTransport ? ' active' : ''}" data-key="${key}">${label}</button>`).join('')}
+      </div>
+      <form id="applyForm">
+        <div class="form-group">
+          <label class="form-label">Phone number</label>
+          <input class="form-input" id="applyPhone" type="tel" placeholder="080…" required>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Anything we should know? (optional)</label>
+          <textarea class="form-textarea" id="applyNote" placeholder="Availability, experience, etc."></textarea>
+        </div>
+        <button type="submit" class="form-submit">Submit application</button>
+      </form>
+    </div>
+  `;
+}
+
+function renderPendingCard(app) {
+  return `
+    <div class="swift-card">
+      <div class="swift-status-pill">⏳ Under review</div>
+      <h3>Application submitted</h3>
+      <p>We're reviewing your Swift Runner application (${TRANSPORTS.find(t => t[0] === app.transport_type)?.[1] || app.transport_type}). You'll be notified once it's approved.</p>
+    </div>
+  `;
+}
+
+function renderDeclinedCard(app) {
+  return `
+    <div class="swift-card">
+      <div class="swift-status-pill" style="background:rgba(251,113,133,0.12);color:var(--danger)">✕ Not approved</div>
+      <h3>Application declined</h3>
+      <p>${app.decline_reason || "Your application wasn't approved this time."}</p>
+      <button class="form-submit" id="reapplyBtn" style="margin-top:4px">Apply again</button>
+    </div>
+  `;
+}
+
+let locationWatchId = null;
+let lastLocationSent = 0;
+
+function startLocationBroadcast() {
+  if (locationWatchId != null || !navigator.geolocation) return;
+  locationWatchId = navigator.geolocation.watchPosition(
+    (pos) => {
+      const now = Date.now();
+      if (now - lastLocationSent < 10000) return; // throttle to once/10s
+      lastLocationSent = now;
+      window.sb.from('swift_runners').update({
+        current_lat: pos.coords.latitude, current_lng: pos.coords.longitude, updated_at: new Date().toISOString(),
+      }).eq('user_id', myUserId).then(({ error }) => { if (error) console.error('Location update error:', error); });
+    },
+    (err) => console.warn('Location watch error:', err),
+    { enableHighAccuracy: true, maximumAge: 5000 }
+  );
+}
+function stopLocationBroadcast() {
+  if (locationWatchId != null) { navigator.geolocation.clearWatch(locationWatchId); locationWatchId = null; }
+}
+
+async function renderRunnerDashboard(runner) {
+  const { data: earningsRows } = await window.sb.from('swift_orders').select('fee').eq('runner_id', runner.id).not('completed_at', 'is', null);
+  const totalEarned = (earningsRows || []).reduce((sum, o) => sum + (o.fee || 0), 0);
+
+  const section = document.getElementById('runnerSection');
+  section.innerHTML = `
+    <div class="swift-card">
+      <div class="swift-toggle-row">
+        <div>
+          <h3 style="margin-bottom:2px">You're a Swift Runner</h3>
+          <p style="margin:0">${runner.is_online ? 'You are online and visible to buyers.' : 'You are offline.'}</p>
+        </div>
+        <label class="switch"><input type="checkbox" id="onlineToggle" ${runner.is_online ? 'checked' : ''}><span class="switch-track"></span></label>
+      </div>
+      <div class="swift-earnings-row">
+        <div><b>${window.CP.fmtNaira(totalEarned)}</b><span>Total earned</span></div>
+        <div><b>${(runner.avg_rating || 0).toFixed(1)}★</b><span>${runner.rating_count || 0} ratings</span></div>
+      </div>
+    </div>
+    <div class="swift-card">
+      <h3>Incoming requests</h3>
+      <div id="incomingOrders"><p style="color:var(--text3);font-size:13px;">Loading…</p></div>
+    </div>
+    <div id="runnerActiveOrderCard"></div>
+  `;
+
+  document.getElementById('onlineToggle').addEventListener('change', async (e) => {
+    await window.sb.from('swift_runners').update({ is_online: e.target.checked, updated_at: new Date().toISOString() }).eq('user_id', myUserId);
+    if (e.target.checked) startLocationBroadcast(); else stopLocationBroadcast();
+  });
+  if (runner.is_online) startLocationBroadcast();
+
+  loadIncomingOrders(runner);
+  loadRunnerActiveOrder(runner);
+}
+
+async function loadRunnerActiveOrder(runner) {
+  const card = document.getElementById('runnerActiveOrderCard');
+  if (!card) return;
+  const { data } = await window.sb
+    .from('swift_orders').select('*')
+    .eq('runner_id', runner.id)
+    .in('status', ['accepted', 'picked_up', 'delivered'])
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (!data) { card.style.display = 'none'; card.innerHTML = ''; return; }
+  card.style.display = 'block';
+  card.className = 'swift-card';
+
+  if (data.status === 'accepted') {
+    card.innerHTML = `
+      <div class="swift-status-pill">📍 Heading to pickup</div>
+      <h3>${data.pickup_place || 'Pickup location'}</h3>
+      <p>Ask for the pickup PIN and enter it here to confirm you've collected the item.</p>
+      <div class="pin-entry-row">
+        <input type="text" id="pickupPinInput" placeholder="4-digit PIN" maxlength="4" inputmode="numeric">
+        <button class="btn btn-primary" id="confirmPickupBtn">Confirm</button>
+      </div>
+      <div class="swift-map" id="runnerMap"></div>
+      ${disputeButton(data.id, myUserId, data.buyer_id)}
+    `;
+    renderMap('runnerMap', data, null);
+    document.getElementById('confirmPickupBtn').addEventListener('click', async () => {
+      const entered = document.getElementById('pickupPinInput').value.trim();
+      if (String(entered) !== String(data.pickup_pin)) { alert('Wrong pickup PIN.'); return; }
+      await window.sb.from('swift_orders').update({ status: 'picked_up', updated_at: new Date().toISOString() }).eq('id', data.id);
+      loadRunnerActiveOrder(runner);
+    });
+    return;
+  }
+
+  if (data.status === 'picked_up') {
+    card.innerHTML = `
+      <div class="swift-status-pill">📦 Out for delivery</div>
+      <h3>${data.dropoff_place || 'Drop-off location'}</h3>
+      <p>Enter the delivery PIN from the buyer once you've handed it over.</p>
+      <div class="pin-entry-row">
+        <input type="text" id="deliveryPinInput" placeholder="4-digit PIN" maxlength="4" inputmode="numeric">
+        <button class="btn btn-primary" id="confirmDeliveryBtn">Confirm</button>
+      </div>
+      <div class="swift-map" id="runnerMap"></div>
+      ${disputeButton(data.id, myUserId, data.buyer_id)}
+    `;
+    renderMap('runnerMap', data, null);
+    document.getElementById('confirmDeliveryBtn').addEventListener('click', async () => {
+      const entered = document.getElementById('deliveryPinInput').value.trim();
+      if (String(entered) !== String(data.delivery_pin)) { alert('Wrong delivery PIN.'); return; }
+      await window.sb.from('swift_orders').update({ status: 'delivered', updated_at: new Date().toISOString() }).eq('id', data.id);
+      loadRunnerActiveOrder(runner);
+    });
+    return;
+  }
+
+  if (data.status === 'delivered' && !data.runner_rated) {
+    card.innerHTML = `
+      <div class="swift-status-pill">✅ Delivered</div>
+      <h3>Rate the buyer</h3>
+      ${starRow('runnerRate')}
+      <textarea class="form-textarea" id="runnerRateComment" placeholder="Optional comment"></textarea>
+      <button class="form-submit" id="runnerRateSubmit" style="margin-top:10px">Submit rating</button>
+    `;
+    let stars = 0;
+    bindStarRow('runnerRateStars', (n) => { stars = n; });
+    document.getElementById('runnerRateSubmit').addEventListener('click', async () => {
+      if (!stars) { alert('Tap a star to rate.'); return; }
+      const comment = document.getElementById('runnerRateComment').value.trim();
+      await window.sb.from('swift_ratings').insert({
+        order_id: data.id, rater_id: myUserId, ratee_id: data.buyer_id, role: 'buyer',
+        stars, comment: comment || null, created_at: new Date().toISOString(),
+      });
+      await window.sb.from('swift_orders').update({ runner_rated: true }).eq('id', data.id);
+      loadRunnerActiveOrder(runner);
+    });
+    return;
+  }
+
+  card.style.display = 'none';
+}
+
+async function loadIncomingOrders(runner) {
+  const list = document.getElementById('incomingOrders');
+  const { data, error } = await window.sb
+    .from('swift_orders').select('*')
+    .eq('university_id', myUniversityId)
+    .in('status', ['searching', 'requested'])
+    .or(`runner_id.eq.${runner.id},runner_id.is.null`)
+    .order('created_at', { ascending: true })
+    .limit(10);
+
+  if (error) { console.error('Incoming orders error:', error); list.innerHTML = `<p style="color:var(--text3);font-size:13px;">Couldn't load requests.</p>`; return; }
+  if (!data || !data.length) { list.innerHTML = `<p style="color:var(--text3);font-size:13px;">No delivery requests right now — check back soon.</p>`; return; }
+
+  list.innerHTML = data.map(o => `
+    <div class="order-req-card" data-id="${o.id}">
+      <div class="order-req-top"><span>${o.pickup_place || 'Pickup on campus'}</span><span>${o.fee ? window.CP.fmtNaira(o.fee) : ''}</span></div>
+      <div class="order-req-sub">${o.note || o.errand_type || 'Delivery request'} · ${window.CP.timeAgo(o.created_at)}</div>
+      <div class="order-req-actions">
+        <button class="btn btn-primary accept-order-btn">Accept</button>
+        <button class="btn btn-ghost decline-order-btn">Decline</button>
+      </div>
     </div>
   `).join('');
 
-  previewRow.querySelectorAll('.remove-photo-btn').forEach(btn => {
-    btn.addEventListener('click', (e) => {
-      e.stopPropagation();
-      selectedFiles.splice(Number(btn.dataset.index), 1);
-      renderPreviews();
-    });
-  });
+  list.querySelectorAll('.accept-order-btn').forEach(btn => btn.addEventListener('click', async (e) => {
+    const orderId = e.target.closest('.order-req-card').dataset.id;
+    const { error } = await window.sb.from('swift_orders').update({ runner_id: runner.id, status: 'accepted', updated_at: new Date().toISOString() }).eq('id', orderId);
+    if (error) { alert("Couldn't accept — it may have been taken."); return; }
+    loadIncomingOrders(runner);
+    loadRunnerActiveOrder(runner);
+  }));
+  list.querySelectorAll('.decline-order-btn').forEach(btn => btn.addEventListener('click', (e) => {
+    e.target.closest('.order-req-card').remove();
+  }));
 }
 
-// ---- Pickup location pin (feeds Swift's delivery pricing) ----
-let pickupMap, pickupMarker;
-function initPickupMap() {
-  pickupMap = L.map('pickupMap', { zoomControl: false, attributionControl: false }).setView([7.5189, 4.5286], 15);
-  L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', { maxZoom: 19 }).addTo(pickupMap);
-  pickupMap.on('click', (e) => setPickupPin(e.latlng.lat, e.latlng.lng));
-}
-function setPickupPin(lat, lng) {
-  const latlng = [lat, lng];
-  if (pickupMarker) pickupMarker.setLatLng(latlng); else pickupMarker = L.marker(latlng).addTo(pickupMap);
-  pickupMap.setView(latlng, 16);
-  document.getElementById('pickupLatField').value = lat;
-  document.getElementById('pickupLngField').value = lng;
-  document.getElementById('pickupPinStatus').textContent = `📍 Pin set — ${lat.toFixed(5)}, ${lng.toFixed(5)}`;
-  document.getElementById('pickupPinStatus').className = 'loc-picker-status set';
-}
-initPickupMap();
+async function initRunnerSection() {
+  const section = document.getElementById('runnerSection');
 
-document.getElementById('pickupLocateBtn').addEventListener('click', () => {
-  if (!navigator.geolocation) { alert('Location not available on this device.'); return; }
-  navigator.geolocation.getCurrentPosition(
-    (pos) => setPickupPin(pos.coords.latitude, pos.coords.longitude),
-    () => alert('Could not get your location — check permissions.')
-  );
-});
+  const { data: runner } = await window.sb.from('swift_runners').select('*').eq('user_id', myUserId).maybeSingle();
+  if (runner && runner.status !== 'banned') { renderRunnerDashboard(runner); return; }
 
-let listingType = 'product';
+  const { data: app } = await window.sb.from('swift_runner_applications').select('*').eq('user_id', myUserId).order('created_at', { ascending: false }).limit(1).maybeSingle();
 
-document.querySelectorAll('.type-toggle .btn').forEach(btn => {
-  btn.addEventListener('click', () => {
-    document.querySelectorAll('.type-toggle .btn').forEach(b => b.classList.remove('active'));
-    btn.classList.add('active');
-    listingType = btn.dataset.type;
-  });
-});
-
-const CATEGORY_MAP = { Textbooks: 'textbooks', Electronics: 'electronics', Fashion: 'fashion', Food: 'food', Services: 'services', Other: 'more' };
-
-document.getElementById('listingForm').addEventListener('submit', async (e) => {
-  e.preventDefault();
-  if (!window.CP_USER || !window.CP_PROFILE?.university_id) { alert('Please sign in again.'); window.location.href = 'auth.html'; return; }
-
-  const form = e.target;
-  const title = form.querySelector('input[placeholder^="e.g. CHM"]').value.trim();
-  const description = form.querySelector('textarea').value.trim();
-  const price = parseFloat(form.querySelector('input[type="number"]').value) || 0;
-  const categoryLabel = form.querySelector('select').value;
-  const pickupLabel = document.getElementById('pickupLabelInput').value.trim();
-
-  if (!title) { alert('Please give your listing a title.'); return; }
-
-  const submitBtn = form.querySelector('.form-submit');
-  submitBtn.disabled = true;
-
-  let media_urls = [];
-  if (selectedFiles.length) {
-    try {
-      submitBtn.textContent = `Uploading photos… 0/${selectedFiles.length}`;
-      let done = 0;
-      media_urls = await Promise.all(selectedFiles.map(file =>
-        window.CP.uploadToCloudinary(file, { folder: `camplugie/listings/${window.CP_USER.id}` }).then(url => {
-          done++; submitBtn.textContent = `Uploading photos… ${done}/${selectedFiles.length}`;
-          return url;
-        })
-      ));
-    } catch (err) {
-      console.error('Photo upload error:', err);
-      submitBtn.disabled = false; submitBtn.textContent = 'Post listing';
-      alert(err.message || 'Could not upload one of your photos — please try again.');
-      return;
-    }
+  if (app && app.status === 'pending') { section.innerHTML = renderPendingCard(app); return; }
+  if (app && app.status === 'declined') {
+    section.innerHTML = renderDeclinedCard(app);
+    document.getElementById('reapplyBtn').addEventListener('click', () => { section.innerHTML = renderApplicationForm(); bindApplyForm(); });
+    return;
   }
 
-  submitBtn.textContent = 'Posting…';
+  section.innerHTML = renderApplicationForm();
+  bindApplyForm();
+}
 
-  const { error } = await window.sb.from('listings').insert({
-    seller_id: window.CP_USER.id,
-    university_id: window.CP_PROFILE.university_id,
-    title,
-    description,
-    price,
-    category: CATEGORY_MAP[categoryLabel] || 'more',
-    listing_type: listingType,
-    pickup_label: pickupLabel,
-    pickup_lat: parseFloat(document.getElementById('pickupLatField').value) || null,
-    pickup_lng: parseFloat(document.getElementById('pickupLngField').value) || null,
-    media_urls,
-    status: 'active',
-    is_available: true,
+function bindApplyForm() {
+  document.getElementById('transportRow').addEventListener('click', (e) => {
+    const btn = e.target.closest('.transport-pill');
+    if (!btn) return;
+    selectedTransport = btn.dataset.key;
+    document.querySelectorAll('.transport-pill').forEach(p => p.classList.toggle('active', p.dataset.key === selectedTransport));
   });
 
-  submitBtn.disabled = false;
-  submitBtn.textContent = 'Post listing';
+  document.getElementById('applyForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const phone = document.getElementById('applyPhone').value.trim();
+    const note = document.getElementById('applyNote').value.trim();
+    if (!phone) return;
 
-  if (error) { console.error('Listing create error:', error); alert('Could not post your listing — please try again.'); return; }
-  window.location.href = 'home.html';
+    const btn = e.target.querySelector('.form-submit');
+    btn.disabled = true; btn.textContent = 'Submitting…';
+
+    const { error } = await window.sb.from('swift_runner_applications').insert({
+      user_id: myUserId, university_id: myUniversityId,
+      phone, transport_type: selectedTransport, note: note || null,
+      status: 'pending', created_at: new Date().toISOString(),
+    });
+
+    btn.disabled = false; btn.textContent = 'Submit application';
+    if (error) { console.error('Application error:', error); alert('Could not submit — please try again.'); return; }
+    initRunnerSection();
+  });
+}
+
+document.addEventListener('cp-ready', async (e) => {
+  myUserId = e.detail.user.id;
+  myUniversityId = e.detail.profile?.university_id;
+  if (!myUniversityId) return;
+
+  linkedListing = await loadLinkedListing();
+  await loadCampusCenter(myUniversityId);
+  await loadCampusOpen(myUniversityId);
+  await loadActiveOrder(myUserId);
+  await initRunnerSection();
 });
 
 </script>
