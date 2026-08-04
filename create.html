@@ -1498,7 +1498,11 @@ document.getElementById('listingForm').addEventListener('submit', async (e) => {
   submitBtn.disabled = false;
   submitBtn.textContent = 'Post listing';
 
-  if (error) { console.error('Listing create error:', error); alert('Could not post your listing — please try again.'); return; }
+  if (error) {
+    console.error('Listing create error:', error);
+    alert(`Could not post your listing:\n\n${error.message || 'Unknown error'}${error.code ? `\n(code: ${error.code})` : ''}${error.details ? `\n${error.details}` : ''}`);
+    return;
+  }
   window.location.href = 'home.html';
 });
 
