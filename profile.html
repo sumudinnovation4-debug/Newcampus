@@ -339,24 +339,7 @@ img { max-width: 100%; display: block; }
 .cp-page-header h1 { font-size: 18px; font-weight: 700; }
 .cp-page-header .brand-sub { font-size: 11.5px; color: var(--text3); font-weight: 500; margin-top: 1px; }
 
-/* ===== Post / feed card (Yard) ===== */
-.post-card {
-  margin: 12px 16px 0;
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  padding: 14px;
-}
-.post-card.pinned { background: linear-gradient(135deg, var(--brand-dark), var(--brand) 130%); border: none; }
-.post-card.pinned .post-meta, .post-card.pinned .post-body { color: rgba(255,255,255,0.9); }
-.post-card.pinned .post-name { color: #fff; }
-.post-eyebrow {
-  display: flex; align-items: center; gap: 6px;
-  font-size: 11px; font-weight: 800; letter-spacing: .04em; text-transform: uppercase;
-  color: rgba(255,255,255,0.85);
-  margin-bottom: 10px;
-}
-.post-author { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+/* ===== Post / feed card (Yard) — X-style ===== */
 .avatar {
   width: 40px; height: 40px; border-radius: 50%; flex-shrink: 0;
   background: linear-gradient(135deg, var(--brand), var(--brand-dark));
@@ -364,13 +347,128 @@ img { max-width: 100%; display: block; }
   font-weight: 700; font-size: 13px; color: #fff; overflow: hidden;
 }
 .avatar img { width: 100%; height: 100%; object-fit: cover; }
-.post-name { font-weight: 700; font-size: 14px; }
-.post-meta { font-size: 12px; color: var(--text3); margin-top: 1px; }
-.post-body { font-size: 14px; line-height: 1.5; color: var(--text2); }
-.post-actions { display: flex; align-items: center; gap: 18px; margin-top: 12px; }
-.post-action { display: flex; align-items: center; gap: 5px; font-size: 12.5px; font-weight: 700; color: var(--text3); background: none; border: none; cursor: pointer; }
-.post-action svg { width: 16px; height: 16px; }
-.post-action.active { color: var(--accent); }
+
+.post-card {
+  display: flex; gap: 11px;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border);
+  background: none; border-radius: 0; margin: 0;
+  cursor: default;
+}
+.post-card .avatar { width: 42px; height: 42px; flex-shrink: 0; }
+.post-main { flex: 1; min-width: 0; }
+.post-header-row { display: flex; align-items: baseline; gap: 4px; flex-wrap: wrap; }
+.post-header-row .post-name { font-weight: 800; font-size: 15px; color: var(--text); }
+.post-header-row .post-handle, .post-header-row .post-dot, .post-header-row .post-time { color: var(--text3); font-size: 14px; }
+.post-eyebrow {
+  display: flex; align-items: center; gap: 6px;
+  font-size: 12px; font-weight: 800; color: var(--accent);
+  margin-bottom: 4px;
+}
+.post-body { font-size: 15px; line-height: 1.35; color: var(--text); margin-top: 2px; white-space: pre-wrap; word-break: break-word; }
+.post-actions {
+  display: flex; align-items: center; justify-content: space-between;
+  max-width: 320px; margin-top: 10px; margin-left: -8px;
+}
+.post-action {
+  display: flex; align-items: center; gap: 6px;
+  font-size: 13px; font-weight: 600; color: var(--text3);
+  background: none; border: none; cursor: pointer;
+  padding: 6px 8px; border-radius: 999px;
+}
+.post-action svg { width: 17px; height: 17px; }
+.post-action.zap-btn.liked { color: var(--accent); font-weight: 800; }
+.post-action.comment-btn:active { color: var(--brand); }
+.post-action.repost-active { color: var(--money); }
+
+/* Pinned/official posts keep a highlighted treatment, distinct from the plain feed rows */
+.post-card.pinned {
+  background: linear-gradient(135deg, var(--brand-dark), var(--brand) 130%);
+  border-radius: var(--radius); margin: 10px 16px 0; border: none; padding: 14px;
+}
+.post-card.pinned .post-header-row .post-name,
+.post-card.pinned .post-header-row .post-handle,
+.post-card.pinned .post-header-row .post-dot,
+.post-card.pinned .post-header-row .post-time { color: rgba(255,255,255,0.92); }
+.post-card.pinned .post-body { color: rgba(255,255,255,0.95); }
+.post-card.pinned .post-eyebrow { color: #fff; }
+.post-card.pinned .post-action { color: rgba(255,255,255,0.75); }
+
+/* ---- Media: single image/video, or a Facebook-style swipeable carousel for multiple ---- */
+.post-media-wrap { margin-top: 10px; border-radius: 14px; overflow: hidden; border: 1px solid var(--border); }
+.post-media-single img { width: 100%; max-height: 420px; object-fit: cover; display: block; }
+
+.media-carousel { position: relative; }
+.media-carousel-track {
+  display: flex; overflow-x: auto; scroll-snap-type: x mandatory;
+  scrollbar-width: none; -webkit-overflow-scrolling: touch;
+}
+.media-carousel-track::-webkit-scrollbar { display: none; }
+.media-carousel-slide { flex: 0 0 100%; scroll-snap-align: center; }
+.media-carousel-slide img { width: 100%; max-height: 420px; object-fit: cover; display: block; }
+.media-carousel-dots {
+  position: absolute; bottom: 8px; left: 50%; transform: translateX(-50%);
+  display: flex; gap: 5px; background: rgba(9,7,20,.5); padding: 5px 8px; border-radius: 999px;
+}
+.media-carousel-dots span { width: 5px; height: 5px; border-radius: 50%; background: rgba(255,255,255,0.5); transition: background .15s, width .15s; }
+.media-carousel-dots span.active { background: #fff; width: 14px; border-radius: 3px; }
+.media-count-badge {
+  position: absolute; top: 8px; right: 8px; background: rgba(9,7,20,.6); color: #fff;
+  font-size: 10.5px; font-weight: 700; padding: 3px 8px; border-radius: 999px;
+}
+
+/* ---- Custom video player (no native controls) ---- */
+.custom-video-wrap { position: relative; background: #000; aspect-ratio: 16/10; }
+.custom-video-wrap video { width: 100%; height: 100%; object-fit: contain; display: block; background: #000; }
+.video-tap-target { position: absolute; inset: 0; }
+.video-center-btn {
+  position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+  width: 52px; height: 52px; border-radius: 50%; background: rgba(9,7,20,.55);
+  display: flex; align-items: center; justify-content: center; pointer-events: none;
+  opacity: 0; transition: opacity .15s;
+}
+.custom-video-wrap.paused .video-center-btn { opacity: 1; }
+.video-center-btn svg { width: 22px; height: 22px; color: #fff; }
+.video-mute-btn {
+  position: absolute; top: 8px; right: 8px; width: 30px; height: 30px; border-radius: 50%;
+  background: rgba(9,7,20,.55); border: none; color: #fff; display: flex; align-items: center; justify-content: center; cursor: pointer;
+}
+.video-mute-btn svg { width: 15px; height: 15px; }
+.video-progress-row { position: absolute; left: 8px; right: 8px; bottom: 8px; height: 3px; background: rgba(255,255,255,0.25); border-radius: 3px; cursor: pointer; }
+.video-progress-fill { height: 100%; width: 0%; background: var(--accent); border-radius: 3px; }
+
+/* Compose overlay */
+.compose-overlay { position: fixed; inset: 0; z-index: 100; background: var(--bg); display: flex; flex-direction: column; }
+.compose-header { display: flex; align-items: center; justify-content: space-between; padding: calc(var(--safe-top) + 14px) 16px 12px; border-bottom: 1px solid var(--border); }
+.compose-header button.cancel { background: none; border: none; color: var(--text2); font-size: 14px; font-weight: 600; }
+.compose-header button.post-submit { background: var(--accent); color: #1A1200; border: none; border-radius: 999px; padding: 9px 18px; font-size: 13.5px; font-weight: 800; cursor: pointer; }
+.compose-header button.post-submit:disabled { opacity: .5; }
+.compose-body { flex: 1; overflow-y: auto; padding: 16px; }
+.compose-body textarea { width: 100%; border: none; background: none; outline: none; resize: none; color: var(--text); font: inherit; font-size: 16px; min-height: 100px; }
+.compose-media-row { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
+.compose-media-thumb { position: relative; width: 84px; height: 84px; border-radius: 12px; overflow: hidden; background: var(--surface2); }
+.compose-media-thumb img, .compose-media-thumb video { width: 100%; height: 100%; object-fit: cover; }
+.compose-media-thumb .remove-media-btn { position: absolute; top: 3px; right: 3px; width: 20px; height: 20px; border-radius: 50%; background: rgba(9,7,20,.75); color: #fff; border: none; font-size: 12px; cursor: pointer; }
+.compose-footer { display: flex; gap: 16px; padding: 14px 16px calc(14px + var(--safe-bottom)); border-top: 1px solid var(--border); }
+.compose-footer button { background: none; border: none; color: var(--brand); display: flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 700; cursor: pointer; }
+.compose-footer svg { width: 20px; height: 20px; }
+
+/* Comments overlay */
+.comments-overlay { position: fixed; inset: 0; z-index: 100; background: rgba(9,7,20,.85); display: flex; align-items: flex-end; }
+.comments-sheet { background: var(--surface); border-radius: 20px 20px 0 0; width: 100%; max-width: 480px; margin: 0 auto; max-height: 80vh; display: flex; flex-direction: column; }
+.comments-sheet-header { display: flex; align-items: center; justify-content: space-between; padding: 16px; border-bottom: 1px solid var(--border); }
+.comments-sheet-header button { background: none; border: none; color: var(--text3); font-size: 20px; cursor: pointer; }
+.comments-list { flex: 1; overflow-y: auto; padding: 8px 16px; }
+.comment-row { display: flex; gap: 10px; padding: 10px 0; border-bottom: 1px solid var(--border); }
+.comment-row .avatar { width: 32px; height: 32px; font-size: 11px; flex-shrink: 0; }
+.comment-row-text { flex: 1; }
+.comment-row-text b { font-size: 12.5px; display: block; }
+.comment-row-text span.time { font-size: 10.5px; color: var(--text3); }
+.comment-row-text p { font-size: 13px; color: var(--text2); margin: 3px 0 0; }
+.comments-input-row { display: flex; gap: 8px; padding: 12px 16px calc(12px + var(--safe-bottom)); border-top: 1px solid var(--border); }
+.comments-input-row input { flex: 1; background: var(--surface2); border: 1px solid var(--border); border-radius: 999px; padding: 11px 15px; font: inherit; font-size: 13.5px; color: var(--text); outline: none; }
+.comments-input-row button { width: 40px; height: 40px; border-radius: 50%; background: var(--brand); color: #fff; border: none; display: flex; align-items: center; justify-content: center; cursor: pointer; flex-shrink: 0; }
+.comments-input-row button svg { width: 16px; height: 16px; }
 
 .cp-fab {
   position: fixed; right: 20px; bottom: calc(var(--bottom-h) + var(--safe-bottom) + 16px);
@@ -763,6 +861,17 @@ img { max-width: 100%; display: block; }
   border-radius: 10px; padding: 11px 12px; font-size: 12px; font-weight: 700; cursor: pointer; white-space: nowrap;
 }
 
+/* ===== Location picker (Leaflet) ===== */
+.loc-picker-map { width: 100%; height: 160px; border-radius: var(--radius-sm); overflow: hidden; margin-top: 8px; background: var(--surface2); cursor: crosshair; }
+.loc-picker-hint { font-size: 11px; color: var(--text3); margin-top: 5px; }
+.loc-picker-status { font-size: 11.5px; font-weight: 700; margin-top: 5px; }
+.loc-picker-status.set { color: var(--money); }
+.loc-picker-status.unset { color: var(--text3); }
+.fee-breakdown { background: var(--surface2); border-radius: var(--radius-sm); padding: 12px 14px; margin-top: 6px; }
+.fee-breakdown-row { display: flex; justify-content: space-between; font-size: 12.5px; color: var(--text2); padding: 3px 0; }
+.fee-breakdown-row.total { border-top: 1px solid var(--border); margin-top: 6px; padding-top: 8px; font-weight: 800; color: var(--text); font-size: 14px; }
+.fee-badge { display: inline-flex; align-items: center; gap: 4px; background: var(--accent-soft); color: var(--accent); border-radius: 999px; padding: 3px 10px; font-size: 11px; font-weight: 700; margin-left: 6px; }
+
 /* ===== Admin ===== */
 .admin-denied { text-align: center; padding: 60px 24px; color: var(--text3); }
 .admin-stats-row { display: flex; gap: 10px; padding: 14px 16px 4px; overflow-x: auto; scrollbar-width: none; }
@@ -893,6 +1002,27 @@ img { max-width: 100%; display: block; }
 .call-row-text span { font-size: 11.5px; color: var(--text3); }
 .call-row-text .missed { color: var(--danger); }
 
+/* ===== Login mode toggle (phone/email) ===== */
+.login-mode-toggle { display: flex; background: var(--surface2); border: 1px solid var(--border); border-radius: 10px; padding: 3px; margin-bottom: 14px; }
+.login-mode-toggle button { flex: 1; border: none; background: none; color: var(--text3); font: inherit; font-size: 12.5px; font-weight: 700; padding: 8px; border-radius: 7px; cursor: pointer; }
+.login-mode-toggle button.active { background: var(--brand); color: #fff; }
+
+/* ===== Avatar picker ===== */
+.avatar-picker { display: flex; justify-content: center; margin-bottom: 6px; }
+.avatar-picker-circle {
+  position: relative; width: 84px; height: 84px; border-radius: 50%; cursor: pointer;
+  background: var(--surface2); border: 1.5px dashed var(--border);
+  display: flex; align-items: center; justify-content: center; overflow: hidden;
+}
+.avatar-picker-circle img { width: 100%; height: 100%; object-fit: cover; }
+.avatar-picker-circle .placeholder-icon { color: var(--text3); width: 26px; height: 26px; }
+.avatar-picker-camera {
+  position: absolute; bottom: 0; right: 0; width: 26px; height: 26px; border-radius: 50%;
+  background: var(--accent); color: #1A1200; display: flex; align-items: center; justify-content: center;
+  border: 2px solid var(--bg);
+}
+.avatar-picker-camera svg { width: 13px; height: 13px; }
+
 /* ===== Verify email ===== */
 .verify-icon { width: 64px; height: 64px; border-radius: 50%; background: var(--brand-soft); display: flex; align-items: center; justify-content: center; font-size: 28px; margin: 0 auto 18px; }
 .verify-resend-btn { background: none; border: 1px solid var(--border); color: var(--text2); border-radius: 999px; padding: 10px 20px; font-size: 13px; font-weight: 700; cursor: pointer; }
@@ -985,10 +1115,11 @@ img { max-width: 100%; display: block; }
 
   <div class="profile-cover"></div>
   <div class="profile-head">
-    <div class="profile-avatar">CO</div>
+    <div class="profile-avatar" id="profileAvatar" style="cursor:pointer">CO</div>
+    <input type="file" id="avatarEditInput" accept="image/*" style="display:none">
     <div class="profile-name-row">
-      <h2>Chidinma Okoro</h2>
-      <span class="verified-badge">✓</span>
+      <h2 id="profileNameHeading">Chidinma Okoro</h2>
+      <span class="verified-badge" id="verifiedBadge">✓</span>
     </div>
     <div class="profile-handle">@chidinma · Obafemi Awolowo University</div>
     <div class="profile-bio">Selling textbooks &amp; gadgets I no longer need 📚 · Chemistry, 300L</div>
@@ -1001,8 +1132,25 @@ img { max-width: 100%; display: block; }
   </div>
 
   <div class="profile-actions">
-    <button class="btn btn-primary">Edit profile</button>
+    <button class="btn btn-primary" id="editProfileBtn">Edit profile</button>
     <a class="btn btn-ghost" href="settings.html">Settings</a>
+  </div>
+
+  <!-- Optional post-signup verification — shown only if not yet verified -->
+  <div class="swift-card" id="verifyCard" style="display:none;margin:14px 16px 0">
+    <h3>Verify your account</h3>
+    <p>Add your matric number or school email to get a verified badge — totally optional, and you can skip this for now.</p>
+    <div class="form-group">
+      <label class="form-label">Matric number</label>
+      <input class="form-input" id="matricInput" placeholder="e.g. CSC/2021/045">
+    </div>
+    <div style="text-align:center;color:var(--text3);font-size:11.5px;margin:4px 0 10px">or</div>
+    <div class="form-group">
+      <label class="form-label">School email</label>
+      <input class="form-input" id="schoolEmailInput" type="email" placeholder="you@student.edu">
+    </div>
+    <button class="form-submit" id="submitVerifyBtn">Submit for verification</button>
+    <button type="button" id="skipVerifyBtn" style="width:100%;background:none;border:none;color:var(--text3);font-size:12.5px;font-weight:700;padding:10px;cursor:pointer">Skip for now</button>
   </div>
 
   <div class="profile-menu">
@@ -1042,6 +1190,21 @@ img { max-width: 100%; display: block; }
     </a>
   </div>
 
+</div>
+
+<!-- Edit profile overlay -->
+<div id="editProfileOverlay" style="display:none;position:fixed;inset:0;z-index:100;background:rgba(9,7,20,.85);align-items:flex-end">
+  <div style="background:var(--surface);border-radius:20px 20px 0 0;padding:20px;width:100%;max-width:480px;margin:0 auto">
+    <h3 style="font-size:16px;margin-bottom:12px">Edit profile</h3>
+    <form id="editProfileForm">
+      <div class="form-group"><label class="form-label">Full name</label><input class="form-input" id="editFullName" required></div>
+      <div class="form-group"><label class="form-label">Bio</label><textarea class="form-textarea" id="editBio" placeholder="A short line about you"></textarea></div>
+      <div style="display:flex;gap:10px">
+        <button type="button" class="btn btn-ghost" id="cancelEditProfile" style="flex:1">Cancel</button>
+        <button type="submit" class="form-submit" style="flex:1;margin-top:0">Save</button>
+      </div>
+    </form>
+  </div>
 </div>
 
 <nav class="cp-bottom-nav">
@@ -1116,6 +1279,55 @@ window.CP.openOrCreateConversation = async function (meId, otherUserId, listingI
 
   if (error) { console.error('Conversation create error:', error); return null; }
   return created.id;
+};
+
+</script>
+<script>
+// Cloudinary unsigned upload — cloud name + upload preset are safe to expose
+// client-side (that's the point of an unsigned preset). The API key/secret
+// from your .env must NEVER go in browser code; they're not needed here.
+window.CP = window.CP || {};
+window.CP.CLOUDINARY_CLOUD_NAME = 'dkkowi2j9';
+window.CP.CLOUDINARY_UPLOAD_PRESET = 'campusplug';
+
+/**
+ * Uploads a single file to Cloudinary and resolves with the secure_url.
+ * onProgress(percent) is optional.
+ */
+window.CP.uploadToCloudinary = function (file, { folder = 'camplugie/listings', onProgress } = {}) {
+  return new Promise((resolve, reject) => {
+    if (!file) { resolve(null); return; }
+    if (!file.type?.startsWith('image/')) { reject(new Error('Please select an image file.')); return; }
+    if (file.size > 8 * 1024 * 1024) { reject(new Error('Image must be under 8MB.')); return; }
+
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('upload_preset', window.CP.CLOUDINARY_UPLOAD_PRESET);
+    if (folder) formData.append('folder', folder);
+
+    const xhr = new XMLHttpRequest();
+    xhr.open('POST', `https://api.cloudinary.com/v1_1/${window.CP.CLOUDINARY_CLOUD_NAME}/image/upload`);
+    xhr.upload.onprogress = (e) => { if (e.lengthComputable && onProgress) onProgress(Math.round((e.loaded / e.total) * 100)); };
+    xhr.onload = () => {
+      let payload = {};
+      try { payload = JSON.parse(xhr.responseText || '{}'); } catch {}
+      console.log('Cloudinary upload response:', xhr.status, payload);
+      if (xhr.status >= 200 && xhr.status < 300 && payload.secure_url) { resolve(payload.secure_url); return; }
+      const cloudinaryMsg = payload?.error?.message;
+      reject(new Error(
+        cloudinaryMsg
+          ? `Cloudinary: ${cloudinaryMsg}`
+          : `Upload failed (HTTP ${xhr.status}). Most likely cause: the "${window.CP.CLOUDINARY_UPLOAD_PRESET}" upload preset in your Cloudinary dashboard doesn't exist or isn't set to "Unsigned" mode (Settings → Upload → Upload presets).`
+      ));
+    };
+    xhr.onerror = () => reject(new Error('Network upload failed — couldn\u2019t reach Cloudinary at all. Check your internet connection.'));
+    xhr.send(formData);
+  });
+};
+
+/** Uploads multiple files in parallel, returns array of secure_urls in the same order. */
+window.CP.uploadMultipleToCloudinary = function (files, opts) {
+  return Promise.all(Array.from(files).map(f => window.CP.uploadToCloudinary(f, opts)));
 };
 
 </script>
@@ -1207,13 +1419,25 @@ window.CP_signOut = async () => {
 
 </script>
 <script>
+let myUserId = null;
+let myProfile = null;
+
 async function loadProfile(profile, userId) {
+  myProfile = profile;
   document.getElementById('adminMenuItem').style.display = profile?.is_admin ? 'flex' : 'none';
-  document.querySelector('.profile-avatar').textContent = window.CP.initials(profile?.full_name || profile?.username);
-  document.querySelector('.profile-name-row h2').textContent = profile?.full_name || profile?.username || 'Camplugie user';
-  document.querySelector('.verified-badge').style.display = profile?.is_verified ? 'flex' : 'none';
+
+  const avatarEl = document.getElementById('profileAvatar');
+  avatarEl.innerHTML = profile?.avatar_url ? `<img src="${profile.avatar_url}" alt="">` : window.CP.initials(profile?.full_name || profile?.username);
+
+  document.getElementById('profileNameHeading').textContent = profile?.full_name || profile?.username || 'Camplugie user';
+  document.getElementById('verifiedBadge').style.display = profile?.is_verified ? 'flex' : 'none';
   document.querySelector('.profile-handle').textContent = `@${profile?.username || 'user'} · ${profile?.universities?.name || profile?.institution_name || 'Your Campus'}`;
   document.querySelector('.profile-bio').textContent = profile?.bio || 'No bio yet.';
+
+  // Show the optional verification prompt only if nothing's been submitted yet
+  if (!profile?.is_verified && !profile?.matric_no && !profile?.school_email) {
+    document.getElementById('verifyCard').style.display = 'block';
+  }
 
   const [{ count: listingsCount }, { count: plugsCount }] = await Promise.all([
     window.sb.from('listings').select('id', { count: 'exact', head: true }).eq('seller_id', userId),
@@ -1227,12 +1451,89 @@ async function loadProfile(profile, userId) {
 }
 
 document.addEventListener('cp-ready', (e) => {
-  loadProfile(e.detail.profile, e.detail.user.id);
+  myUserId = e.detail.user.id;
+  loadProfile(e.detail.profile, myUserId);
 });
 
 document.querySelector('a[href="auth.html"]')?.addEventListener('click', (e) => {
   e.preventDefault();
   window.CP_signOut();
+});
+
+// ---- Avatar upload (tap the avatar circle to change photo) ----
+document.getElementById('profileAvatar').addEventListener('click', () => document.getElementById('avatarEditInput').click());
+document.getElementById('avatarEditInput').addEventListener('change', async (e) => {
+  const file = e.target.files?.[0];
+  if (!file || !myUserId) return;
+  const avatarEl = document.getElementById('profileAvatar');
+  avatarEl.innerHTML = `<img src="${URL.createObjectURL(file)}" alt="">`; // instant preview
+
+  try {
+    const url = await window.CP.uploadToCloudinary(file, { folder: `camplugie/avatars/${myUserId}` });
+    const { error } = await window.sb.from('profiles').update({ avatar_url: url }).eq('id', myUserId);
+    if (error) throw error;
+  } catch (err) {
+    console.error('Avatar update error:', err);
+    alert(`Could not update photo: ${err.message || 'please try again.'}`);
+  }
+});
+
+// ---- Verification (matric number OR school email — either one, both optional) ----
+document.getElementById('submitVerifyBtn').addEventListener('click', async () => {
+  const matric = document.getElementById('matricInput').value.trim();
+  const schoolEmail = document.getElementById('schoolEmailInput').value.trim();
+  if (!matric && !schoolEmail) { alert('Enter your matric number or school email, or tap Skip.'); return; }
+
+  const btn = document.getElementById('submitVerifyBtn');
+  btn.disabled = true; btn.textContent = 'Submitting…';
+
+  const updates = {};
+  if (matric) updates.matric_no = matric;
+  if (schoolEmail) updates.school_email = schoolEmail;
+
+  const { error } = await window.sb.from('profiles').update(updates).eq('id', myUserId);
+  btn.disabled = false; btn.textContent = 'Submit for verification';
+  if (error) { console.error('Verification submit error:', error); alert(`Could not submit: ${error.message}`); return; }
+
+  // If they gave a school email, also try to attach it to their auth account so
+  // Supabase can send a real confirmation link — this is best-effort and non-blocking.
+  if (schoolEmail) {
+    const { error: emailErr } = await window.sb.auth.updateUser({ email: schoolEmail });
+    if (emailErr) console.warn('Could not attach email to auth account (non-fatal):', emailErr);
+  }
+
+  document.getElementById('verifyCard').innerHTML = `<div class="swift-status-pill">⏳ Submitted</div><h3>Thanks!</h3><p>An admin will review this shortly. ${schoolEmail ? 'Check your inbox for a confirmation link too.' : ''}</p>`;
+});
+document.getElementById('skipVerifyBtn').addEventListener('click', () => {
+  document.getElementById('verifyCard').style.display = 'none';
+});
+
+// ---- Edit profile (full name + bio) ----
+document.getElementById('editProfileBtn').addEventListener('click', () => {
+  document.getElementById('editFullName').value = myProfile?.full_name || '';
+  document.getElementById('editBio').value = myProfile?.bio || '';
+  document.getElementById('editProfileOverlay').style.display = 'flex';
+});
+document.getElementById('cancelEditProfile').addEventListener('click', () => {
+  document.getElementById('editProfileOverlay').style.display = 'none';
+});
+document.getElementById('editProfileForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const full_name = document.getElementById('editFullName').value.trim();
+  const bio = document.getElementById('editBio').value.trim();
+  if (!full_name) return;
+
+  const btn = e.target.querySelector('.form-submit');
+  btn.disabled = true; btn.textContent = 'Saving…';
+
+  const { error } = await window.sb.from('profiles').update({ full_name, bio }).eq('id', myUserId);
+
+  btn.disabled = false; btn.textContent = 'Save';
+  if (error) { console.error('Profile edit error:', error); alert(`Could not save: ${error.message}`); return; }
+
+  document.getElementById('editProfileOverlay').style.display = 'none';
+  myProfile = { ...myProfile, full_name, bio };
+  loadProfile(myProfile, myUserId);
 });
 
 </script>
