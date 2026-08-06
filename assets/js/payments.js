@@ -12,7 +12,16 @@ window.CPPay = (function () {
     const r = await fetch(`${API}/api/${path}`, {
       method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
     });
-    const data = await r.json();
+    let data;
+    try {
+      data = await r.json();
+    } catch {
+      // The response wasn't JSON at all — almost always means the /api function
+      // isn't deployed/reachable (Vercel returned its own HTML 404/500 page
+      // instead of our code running). Check: env vars set in Vercel? did the
+      // last deploy include the /api folder? check Vercel's function logs.
+      throw new Error(`Server didn't return a valid response from /api/${path} (status ${r.status}). The API function likely isn't deployed or crashed before running — check Vercel's deployment logs.`);
+    }
     if (!r.ok) throw new Error(data.error || 'Request failed');
     return data;
   }
@@ -32,12 +41,19 @@ window.CPPay = (function () {
         amount: amountKobo,
         ref: init.reference,
         onClose: () => reject(new Error('Payment window closed')),
-        callback: async (response) => {
-          try {
-            const verify = await post('paystack-verify', { reference: response.reference });
-            if (!verify.ok) return reject(new Error('Payment could not be verified'));
-            resolve(verify);
-          } catch (e) { reject(e); }
+        // NOTE: this must be a plain function, not `async`. Paystack's inline.js
+        // rejects async functions here with "Attribute callback must be a valid
+        // function" because it checks the function's string form, and async
+        // functions serialize differently. The async work happens inside an
+        // IIFE instead so the outer callback stays a plain function.
+        callback: (response) => {
+          (async () => {
+            try {
+              const verify = await post('paystack-verify', { reference: response.reference });
+              if (!verify.ok) return reject(new Error('Payment could not be verified'));
+              resolve(verify);
+            } catch (e) { reject(e); }
+          })();
         },
       });
       handler.openIframe();
