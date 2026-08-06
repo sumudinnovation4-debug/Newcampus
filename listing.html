@@ -790,6 +790,9 @@ img { max-width: 100%; display: block; }
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script src="https://js.paystack.co/v1/inline.js"></script>
+<script src="assets/js/config.js"></script>
+<script src="assets/js/payments.js"></script>
 <script>
 // Shared Supabase client — loaded on every page after the Supabase UMD script.
 // Uses the same project as the React app (public anon key, safe to expose client-side; RLS enforces access).
@@ -884,6 +887,7 @@ async function loadListing(userId) {
   const seller = item.profiles || {};
   const isMine = seller.id === userId;
   const isSold = item.status === 'sold' || item.is_available === false;
+  const isFood = (item.category || '').toLowerCase() === 'food';
 
   content.innerHTML = `
     <div class="listing-media" style="background:${TILE_BG}">
@@ -911,6 +915,17 @@ async function loadListing(userId) {
         <div class="listing-actions">
           <a class="btn btn-ghost" href="market.html?tab=mine" style="flex:1">Manage in My listings</a>
         </div>
+      ` : isSold ? `
+        <div class="listing-actions"><span style="color:var(--text3);font-size:13px">This item is no longer available.</span></div>
+      ` : isFood ? `
+        <div class="listing-actions" style="flex-direction:column;align-items:stretch">
+          <div class="form-group" style="margin-bottom:10px">
+            <label class="form-label">Delivery note (room / hostel / landmark)</label>
+            <input class="form-input" id="foodDropoffNote" placeholder="e.g. Hall B, Room 204">
+          </div>
+          <button class="btn btn-primary" id="orderFoodBtn" style="width:100%">🍱 Order & pay ${window.CP.fmtNaira(item.price)}</button>
+          <p style="font-size:11px;color:var(--text3);text-align:center;margin-top:8px">No chat needed — pay now and it's prepared &amp; delivered.</p>
+        </div>
       ` : `
         <div class="listing-actions">
           <button class="btn btn-ghost" id="messageSellerBtn" style="flex:1">💬 Message seller</button>
@@ -920,9 +935,48 @@ async function loadListing(userId) {
     </div>
   `;
 
-  if (!isMine) {
+  if (!isMine && !isSold && !isFood) {
     document.getElementById('messageSellerBtn').addEventListener('click', () => openOrCreateConversation(userId, item));
   }
+  if (!isMine && !isSold && isFood) {
+    document.getElementById('orderFoodBtn').addEventListener('click', (e) => orderFoodNow(e.target, userId, item));
+  }
+}
+
+async function orderFoodNow(btn, buyerId, item) {
+  const dropoffNote = document.getElementById('foodDropoffNote').value.trim();
+  if (!dropoffNote) { alert("Add a delivery note so the vendor knows where to bring it."); return; }
+  if (!navigator.geolocation) { alert('Location not supported on this device.'); return; }
+
+  btn.disabled = true; btn.textContent = 'Getting your location…';
+  navigator.geolocation.getCurrentPosition(async (pos) => {
+    const dropoff_lat = pos.coords.latitude, dropoff_lng = pos.coords.longitude;
+    try {
+      const { data: { session } } = await window.sb.auth.getSession();
+      const email = session.user.email;
+      const amount_kobo = window.CPPay.nairaToKobo(item.price);
+      const commission_kobo = Math.round(amount_kobo * 0.05);
+
+      btn.textContent = 'Opening payment…';
+      const { data: order, error } = await window.sb.from('food_orders').insert({
+        buyer_id: buyerId, seller_id: item.seller_id, listing_id: item.id,
+        items: [{ listing_id: item.id, title: item.title, price: Number(item.price), qty: 1 }],
+        amount_kobo, commission_kobo, payout_kobo: amount_kobo - commission_kobo,
+        dropoff_lat, dropoff_lng, dropoff_note: dropoffNote, status: 'awaiting_payment',
+      }).select().single();
+      if (error) throw error;
+
+      await window.CPPay.payFoodOrder({ foodOrderId: order.id, amountKobo: amount_kobo, email });
+      alert('Order placed! Track it on your food orders page.');
+      window.location.href = 'orders.html';
+    } catch (err) {
+      alert(err.message || 'Payment failed — you were not charged.');
+      btn.disabled = false; btn.textContent = `🍱 Order & pay ${window.CP.fmtNaira(item.price)}`;
+    }
+  }, () => {
+    alert('Turn on location so the vendor can find you.');
+    btn.disabled = false; btn.textContent = `🍱 Order & pay ${window.CP.fmtNaira(item.price)}`;
+  });
 }
 
 async function openOrCreateConversation(userId, item) {
