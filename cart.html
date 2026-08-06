@@ -962,7 +962,7 @@ async function loadCart(userId) {
   const list = document.getElementById('cartList');
   const { data, error } = await window.sb
     .from('cart_items')
-    .select('id, listing_id, created_at, listings(id, title, price, category, media_urls, seller_id, is_available)')
+    .select('id, listing_id, quantity, created_at, listings(id, title, price, category, media_urls, seller_id, is_available)')
     .eq('user_id', userId)
     .order('created_at', { ascending: false });
 
@@ -978,8 +978,13 @@ async function loadCart(userId) {
 
   list.innerHTML = cartItems.map(row => {
     const item = row.listings;
+    const qty = row.quantity || 1;
+    const isFoodItem = (item.category || '').toLowerCase() === 'food';
     const emoji = CATEGORY_EMOJI[(item.category || '').toLowerCase()] || '🛍';
     const media = item.media_urls?.[0];
+    // Food listings are repeatable menu items — being unavailable elsewhere
+    // doesn't apply to them the way "sold" does for one-off marketplace items.
+    const unavailable = !isFoodItem && !item.is_available;
     return `
       <div class="cart-row" data-cart-id="${row.id}" data-listing-id="${item.id}">
         <a href="listing.html?id=${item.id}" class="cart-thumb" style="background:${TILE_BG};text-decoration:none">
@@ -987,18 +992,25 @@ async function loadCart(userId) {
         </a>
         <div class="cart-row-text">
           <b>${item.title}</b>
-          <span>${window.CP.fmtNaira(item.price)}${!item.is_available ? ' · Sold' : ''}</span>
+          <span>${window.CP.fmtNaira(item.price)} × ${qty} = ${window.CP.fmtNaira(item.price * qty)}${unavailable ? ' · Sold' : ''}</span>
         </div>
+        ${!unavailable ? `
+          <div class="cart-qty-stepper" style="display:flex;align-items:center;gap:6px">
+            <button type="button" class="cart-qty-btn" data-delta="-1" style="width:26px;height:26px;border-radius:6px;border:1px solid var(--border);background:none;color:var(--text2)">−</button>
+            <span style="min-width:16px;text-align:center;font-size:13px">${qty}</span>
+            <button type="button" class="cart-qty-btn" data-delta="1" style="width:26px;height:26px;border-radius:6px;border:1px solid var(--border);background:none;color:var(--text2)">+</button>
+          </div>
+        ` : ''}
         <button class="cart-remove-btn">Remove</button>
       </div>
     `;
   }).join('');
 
-  const buyable = cartItems.filter(r => r.listings.is_available);
+  const buyable = cartItems.filter(r => (r.listings.category || '').toLowerCase() === 'food' || r.listings.is_available);
   const foodRows = buyable.filter(r => (r.listings.category || '').toLowerCase() === 'food');
   const itemRows = buyable.filter(r => (r.listings.category || '').toLowerCase() !== 'food');
-  const foodTotal = foodRows.reduce((s, r) => s + Number(r.listings.price), 0);
-  const itemTotal = itemRows.reduce((s, r) => s + Number(r.listings.price), 0);
+  const foodTotal = foodRows.reduce((s, r) => s + Number(r.listings.price) * (r.quantity || 1), 0);
+  const itemTotal = itemRows.reduce((s, r) => s + Number(r.listings.price) * (r.quantity || 1), 0);
 
   document.getElementById('foodCheckoutBlock').style.display = foodRows.length ? 'block' : 'none';
   document.getElementById('itemCheckoutBlock').style.display = itemRows.length ? 'block' : 'none';
@@ -1006,6 +1018,18 @@ async function loadCart(userId) {
   document.getElementById('itemTotal').textContent = window.CP.fmtNaira(itemTotal);
   document.getElementById('cartSummary').style.display = 'block';
   updateCartBadge(cartItems.length);
+
+  document.querySelectorAll('.cart-qty-btn').forEach(btn => {
+    btn.addEventListener('click', async (e) => {
+      const row = e.target.closest('.cart-row');
+      const cartId = row.dataset.cartId;
+      const current = cartItems.find(r => r.id === cartId);
+      const delta = Number(e.target.dataset.delta);
+      const newQty = Math.max(1, (current.quantity || 1) + delta);
+      await window.sb.from('cart_items').update({ quantity: newQty }).eq('id', cartId);
+      loadCart(myUserId);
+    });
+  });
 
   document.querySelectorAll('.cart-remove-btn').forEach(btn => {
     btn.addEventListener('click', async (e) => {
@@ -1043,7 +1067,7 @@ document.getElementById('foodPayBtn')?.addEventListener('click', async (e) => {
   const dropoffNote = document.getElementById('foodDropoffNote').value.trim();
   if (!dropoffNote) { alert('Add a delivery note so the vendor knows where to bring it.'); return; }
 
-  const foodRows = cartItems.filter(r => r.listings.is_available && (r.listings.category || '').toLowerCase() === 'food');
+  const foodRows = cartItems.filter(r => (r.listings.category || '').toLowerCase() === 'food');
   if (!foodRows.length) return;
 
   btn.disabled = true; btn.textContent = 'Getting your location…';
@@ -1056,8 +1080,8 @@ document.getElementById('foodPayBtn')?.addEventListener('click', async (e) => {
     try {
       for (const vendorId of vendorIds) {
         const rows = foodRows.filter(r => r.listings.seller_id === vendorId);
-        const items = rows.map(r => ({ listing_id: r.listings.id, title: r.listings.title, price: Number(r.listings.price), qty: 1 }));
-        const amount_kobo = window.CPPay.nairaToKobo(rows.reduce((s, r) => s + Number(r.listings.price), 0));
+        const items = rows.map(r => ({ listing_id: r.listings.id, title: r.listings.title, price: Number(r.listings.price), qty: r.quantity || 1 }));
+        const amount_kobo = window.CPPay.nairaToKobo(rows.reduce((s, r) => s + Number(r.listings.price) * (r.quantity || 1), 0));
         const commission_kobo = Math.round(amount_kobo * 0.05);
 
         btn.textContent = 'Opening payment…';

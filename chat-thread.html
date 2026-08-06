@@ -1202,17 +1202,22 @@ function renderMessages(messages) {
   return html;
 }
 
-function renderListingChip(listing) {
+async function renderListingChip(listing) {
   const box = document.getElementById('threadListingChip');
   if (!listing) { box.innerHTML = ''; document.getElementById('deliveryRow').innerHTML = ''; document.getElementById('escrowBox').innerHTML = ''; return; }
 
-  const sold = listing.status === 'sold';
-  const canRequestDelivery = sold && listing.sold_to === myUserId; // only the buyer who bought it can request delivery
+  // The deal's state lives on escrow_orders scoped to THIS conversation — not
+  // on the listing itself. Marking a deal started/done here never touches
+  // other buyers' ability to also deal on the same listing.
+  const { data: escrow } = await window.sb.from('escrow_orders').select('*').eq('listing_id', listing.id).eq('conversation_id', convo.id).order('created_at', { ascending: false }).limit(1).maybeSingle();
+  const dealStarted = !!escrow;
+  const dealDone = escrow && escrow.status === 'released';
+  const canRequestDelivery = escrow && ['paid_escrow', 'released'].includes(escrow.status) && myUserId === escrow.buyer_id;
 
   box.innerHTML = `
     <div class="thread-listing-chip">
       <a class="info" href="listing.html?id=${listing.id}">🛍️ ${listing.title} · ${window.CP.fmtNaira(listing.price)}</a>
-      ${sold ? `<span class="thread-sold-tag">✅ Sold</span>` : (isSeller ? `<button class="mark-sold-btn" id="markSoldBtn">Start transaction</button>` : '')}
+      ${dealDone ? `<span class="thread-sold-tag">✅ Deal complete</span>` : dealStarted ? `<span class="thread-sold-tag">🔒 In progress</span>` : (isSeller ? `<button class="mark-sold-btn" id="markSoldBtn">Start transaction</button>` : '')}
     </div>
   `;
 
@@ -1221,14 +1226,16 @@ function renderListingChip(listing) {
     deliveryRow.innerHTML = '';
   } else if (canRequestDelivery) {
     deliveryRow.innerHTML = `<div class="request-delivery-row"><a href="swift.html?listing=${listing.id}">🛵 Request delivery</a></div>`;
+  } else if (dealStarted) {
+    deliveryRow.innerHTML = `<div class="request-delivery-row"><span class="disabled-hint">🔒 Delivery unlocks once payment is confirmed</span></div>`;
   } else {
-    deliveryRow.innerHTML = `<div class="request-delivery-row"><span class="disabled-hint">🔒 Delivery unlocks once the seller marks this sold</span></div>`;
+    deliveryRow.innerHTML = '';
   }
 
-  if (isSeller && !sold) {
+  if (isSeller && !dealStarted) {
     document.getElementById('markSoldBtn').addEventListener('click', startTransaction);
   }
-  if (sold) renderEscrowBox(listing); else document.getElementById('escrowBox').innerHTML = '';
+  if (dealStarted) renderEscrowBox(listing, escrow); else document.getElementById('escrowBox').innerHTML = '';
 }
 
 // Grabs the current device location, wrapped in a confirm() so the person
@@ -1251,42 +1258,40 @@ function lockLocation(promptLabel) {
 }
 
 // Seller taps "Start transaction": locks in the seller's location as the
-// handover point, marks the listing sold to this buyer, and opens an escrow
-// order awaiting the buyer's payment.
+// handover point and opens an escrow order awaiting THIS buyer's payment.
+// This deliberately does NOT touch the listings table — starting a deal in
+// one chat has no effect on the listing's visibility to any other buyer.
+// (If the seller wants to stop other buyers from also starting deals on a
+// one-of-a-kind item, that's a separate manual "delist" action on their
+// listing — not something this button should do implicitly.)
 async function startTransaction() {
   if (!confirm(`Start a transaction for "${convo.listings.title}" with this buyer? You'll be asked to confirm your handover location.`)) return;
   let loc;
   try { loc = await lockLocation('This will be shown as the pickup/handover point.'); }
   catch (e) { alert(e.message); return; }
 
-  const { error } = await window.sb.from('listings').update({
-    status: 'sold', is_available: false, sold_to: convo.buyer_id, sold_at: new Date().toISOString(),
-  }).eq('id', convo.listings.id);
-  if (error) { console.error('Start transaction error:', error); alert('Could not start the transaction — try again.'); return; }
-
   const amount_kobo = window.CPPay.nairaToKobo(convo.listings.price);
   const commission_kobo = Math.round(amount_kobo * 0.05);
-  await window.sb.from('escrow_orders').insert({
+  const { error } = await window.sb.from('escrow_orders').insert({
     kind: 'item', conversation_id: convo.id, listing_id: convo.listings.id,
     buyer_id: convo.buyer_id, seller_id: myUserId,
     amount_kobo, commission_kobo, payout_kobo: amount_kobo - commission_kobo,
     pickup_lat: loc.lat, pickup_lng: loc.lng, status: 'awaiting_payment',
   });
+  if (error) { console.error('Start transaction error:', error); alert('Could not start the transaction — try again.'); return; }
 
   await window.sb.from('messages').insert({
     conversation_id: convo.id, sender_id: myUserId,
     content: `${SYSTEM_PREFIX}✅ Transaction started — location locked in, waiting for payment`, created_at: new Date().toISOString(),
   });
 
-  convo.listings.status = 'sold';
-  convo.listings.sold_to = convo.buyer_id;
   renderListingChip(convo.listings);
 }
 
-async function renderEscrowBox(listing) {
+async function renderEscrowBox(listing, escrow) {
   const box = document.getElementById('escrowBox');
-  const { data: escrow } = await window.sb.from('escrow_orders').select('*').eq('listing_id', listing.id).eq('conversation_id', convo.id).order('created_at', { ascending: false }).limit(1).maybeSingle();
   if (!escrow) { box.innerHTML = ''; return; }
+
 
   const isBuyer = myUserId === escrow.buyer_id;
   let html = '';

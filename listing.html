@@ -915,52 +915,99 @@ async function loadListing(userId) {
         <div class="listing-actions">
           <a class="btn btn-ghost" href="market.html?tab=mine" style="flex:1">Manage in My listings</a>
         </div>
-      ` : isSold ? `
+      ` : (isSold && !isFood) ? `
         <div class="listing-actions"><span style="color:var(--text3);font-size:13px">This item is no longer available.</span></div>
       ` : isFood ? `
         <div class="listing-actions" style="flex-direction:column;align-items:stretch">
+          <div class="qty-stepper" style="display:flex;align-items:center;gap:12px;justify-content:center;margin-bottom:12px">
+            <button type="button" class="btn btn-ghost" id="qtyMinusBtn" style="width:40px;padding:8px;flex:none">−</button>
+            <span id="qtyValue" style="font-size:16px;font-weight:700;min-width:24px;text-align:center">1</span>
+            <button type="button" class="btn btn-ghost" id="qtyPlusBtn" style="width:40px;padding:8px;flex:none">+</button>
+          </div>
           <div class="form-group" style="margin-bottom:10px">
             <label class="form-label">Delivery note (room / hostel / landmark)</label>
             <input class="form-input" id="foodDropoffNote" placeholder="e.g. Hall B, Room 204">
           </div>
-          <button class="btn btn-primary" id="orderFoodBtn" style="width:100%">🍱 Order & pay ${window.CP.fmtNaira(item.price)}</button>
-          <p style="font-size:11px;color:var(--text3);text-align:center;margin-top:8px">No chat needed — pay now and it's prepared &amp; delivered.</p>
+          <button class="btn btn-primary" id="orderFoodBtn" style="width:100%">🍱 Order &amp; pay now — <span id="orderFoodTotal">${window.CP.fmtNaira(item.price)}</span></button>
+          <button class="btn btn-ghost" id="addToCartBtn" style="width:100%;margin-top:8px">🛒 Add to cart instead</button>
+          <p style="font-size:11px;color:var(--text3);text-align:center;margin-top:8px">No chat needed — pay now and it's prepared &amp; delivered, or add to cart to order alongside other food.</p>
         </div>
       ` : `
-        <div class="listing-actions">
-          <button class="btn btn-ghost" id="messageSellerBtn" style="flex:1">💬 Message seller</button>
-          <a class="btn btn-primary" href="swift.html?listing=${item.id}" style="flex:1;text-decoration:none">🛵 Request delivery</a>
+        <div class="listing-actions" style="flex-direction:column;align-items:stretch">
+          <div class="qty-stepper" style="display:flex;align-items:center;gap:12px;justify-content:center;margin-bottom:12px">
+            <button type="button" class="btn btn-ghost" id="qtyMinusBtn" style="width:40px;padding:8px;flex:none">−</button>
+            <span id="qtyValue" style="font-size:16px;font-weight:700;min-width:24px;text-align:center">1</span>
+            <button type="button" class="btn btn-ghost" id="qtyPlusBtn" style="width:40px;padding:8px;flex:none">+</button>
+          </div>
+          <div style="display:flex;gap:10px">
+            <button class="btn btn-ghost" id="messageSellerBtn" style="flex:1">💬 Message seller</button>
+            <button class="btn btn-ghost" id="addToCartBtn" style="flex:1">🛒 Add to cart</button>
+          </div>
+          <a class="btn btn-primary" href="swift.html?listing=${item.id}" style="width:100%;text-decoration:none;margin-top:8px;text-align:center;display:block">🛵 Request delivery</a>
         </div>
       `}
     </div>
   `;
 
-  if (!isMine && !isSold && !isFood) {
+  let qty = 1;
+  const qtyValueEl = document.getElementById('qtyValue');
+  document.getElementById('qtyMinusBtn')?.addEventListener('click', () => { qty = Math.max(1, qty - 1); updateQtyUI(); });
+  document.getElementById('qtyPlusBtn')?.addEventListener('click', () => { qty = qty + 1; updateQtyUI(); });
+  function updateQtyUI() {
+    if (qtyValueEl) qtyValueEl.textContent = qty;
+    const totalEl = document.getElementById('orderFoodTotal');
+    if (totalEl) totalEl.textContent = window.CP.fmtNaira(item.price * qty);
+  }
+
+  if (!isMine && !isFood && !isSold) {
     document.getElementById('messageSellerBtn').addEventListener('click', () => openOrCreateConversation(userId, item));
   }
-  if (!isMine && !isSold && isFood) {
-    document.getElementById('orderFoodBtn').addEventListener('click', (e) => orderFoodNow(e.target, userId, item));
+  if (!isMine && isFood) {
+    document.getElementById('orderFoodBtn').addEventListener('click', (e) => orderFoodNow(e.target, userId, item, () => qty));
+  }
+  if (!isMine && (!isSold || isFood)) {
+    document.getElementById('addToCartBtn')?.addEventListener('click', (e) => addToCart(e.target, userId, item, () => qty));
   }
 }
 
-async function orderFoodNow(btn, buyerId, item) {
+async function addToCart(btn, userId, item, getQty) {
+  btn.disabled = true; const original = btn.textContent; btn.textContent = 'Adding…';
+  try {
+    const qty = getQty();
+    const { data: existing } = await window.sb.from('cart_items').select('id, quantity').eq('user_id', userId).eq('listing_id', item.id).maybeSingle();
+    if (existing) {
+      await window.sb.from('cart_items').update({ quantity: (existing.quantity || 1) + qty }).eq('id', existing.id);
+    } else {
+      await window.sb.from('cart_items').insert({ user_id: userId, listing_id: item.id, quantity: qty, created_at: new Date().toISOString() });
+    }
+    btn.textContent = '✓ Added';
+    setTimeout(() => { btn.disabled = false; btn.textContent = original; }, 1500);
+  } catch (err) {
+    alert(err.message || 'Could not add to cart');
+    btn.disabled = false; btn.textContent = original;
+  }
+}
+
+async function orderFoodNow(btn, buyerId, item, getQty) {
   const dropoffNote = document.getElementById('foodDropoffNote').value.trim();
   if (!dropoffNote) { alert("Add a delivery note so the vendor knows where to bring it."); return; }
   if (!navigator.geolocation) { alert('Location not supported on this device.'); return; }
+  const qty = getQty();
 
+  const resetText = `🍱 Order & pay now — ${window.CP.fmtNaira(item.price * qty)}`;
   btn.disabled = true; btn.textContent = 'Getting your location…';
   navigator.geolocation.getCurrentPosition(async (pos) => {
     const dropoff_lat = pos.coords.latitude, dropoff_lng = pos.coords.longitude;
     try {
       const { data: { session } } = await window.sb.auth.getSession();
       const email = session.user.email;
-      const amount_kobo = window.CPPay.nairaToKobo(item.price);
+      const amount_kobo = window.CPPay.nairaToKobo(item.price * qty);
       const commission_kobo = Math.round(amount_kobo * 0.05);
 
       btn.textContent = 'Opening payment…';
       const { data: order, error } = await window.sb.from('food_orders').insert({
         buyer_id: buyerId, seller_id: item.seller_id, listing_id: item.id,
-        items: [{ listing_id: item.id, title: item.title, price: Number(item.price), qty: 1 }],
+        items: [{ listing_id: item.id, title: item.title, price: Number(item.price), qty }],
         amount_kobo, commission_kobo, payout_kobo: amount_kobo - commission_kobo,
         dropoff_lat, dropoff_lng, dropoff_note: dropoffNote, status: 'awaiting_payment',
       }).select().single();
@@ -971,11 +1018,11 @@ async function orderFoodNow(btn, buyerId, item) {
       window.location.href = 'orders.html';
     } catch (err) {
       alert(err.message || 'Payment failed — you were not charged.');
-      btn.disabled = false; btn.textContent = `🍱 Order & pay ${window.CP.fmtNaira(item.price)}`;
+      btn.disabled = false; btn.textContent = resetText;
     }
   }, () => {
     alert('Turn on location so the vendor can find you.');
-    btn.disabled = false; btn.textContent = `🍱 Order & pay ${window.CP.fmtNaira(item.price)}`;
+    btn.disabled = false; btn.textContent = resetText;
   });
 }
 
