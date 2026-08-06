@@ -856,14 +856,28 @@ img { max-width: 100%; display: block; }
   </div>
 
   <div class="cart-summary" id="cartSummary" style="display:none">
-    <div class="cart-summary-row"><span>Total</span><b id="cartTotal">₦0</b></div>
-    <button class="form-submit" id="checkoutBtn">Message sellers to arrange payment</button>
-    <p style="font-size:11px;color:var(--text3);text-align:center;margin-top:8px">Checkout via Paystack isn't wired up yet — for now, cart items open a chat with each seller.</p>
+    <div id="foodCheckoutBlock" style="display:none">
+      <div class="cart-summary-row"><span>🍱 Food total</span><b id="foodTotal">₦0</b></div>
+      <div class="form-group">
+        <label class="form-label">Delivery note (room / hostel / landmark)</label>
+        <input class="form-input" id="foodDropoffNote" placeholder="e.g. Hall B, Room 204">
+      </div>
+      <button class="form-submit" type="button" id="foodPayBtn">Order &amp; pay now</button>
+      <p style="font-size:11px;color:var(--text3);text-align:center;margin-top:8px">Food skips the chat — pay now and it's prepared &amp; delivered, like ordering takeout.</p>
+    </div>
+    <div id="itemCheckoutBlock" style="display:none;margin-top:18px">
+      <div class="cart-summary-row"><span>Other items</span><b id="itemTotal">₦0</b></div>
+      <button class="form-submit" type="button" id="checkoutBtn">Message sellers to arrange payment</button>
+      <p style="font-size:11px;color:var(--text3);text-align:center;margin-top:8px">These go through chat first — once the seller starts the transaction, you'll pay securely through escrow.</p>
+    </div>
   </div>
 
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script src="https://js.paystack.co/v1/inline.js"></script>
+<script>window.CP_PAYSTACK_PUBLIC_KEY = "pk_test_31d8bf7e2bd93f737dca20a729c2390aa991154c";</script>
+<script src="assets/js/payments.js"></script>
 <script>
 // Shared Supabase client — loaded on every page after the Supabase UMD script.
 // Uses the same project as the React app (public anon key, safe to expose client-side; RLS enforces access).
@@ -980,8 +994,16 @@ async function loadCart(userId) {
     `;
   }).join('');
 
-  const total = cartItems.reduce((sum, row) => sum + (row.listings.is_available ? Number(row.listings.price) : 0), 0);
-  document.getElementById('cartTotal').textContent = window.CP.fmtNaira(total);
+  const buyable = cartItems.filter(r => r.listings.is_available);
+  const foodRows = buyable.filter(r => (r.listings.category || '').toLowerCase() === 'food');
+  const itemRows = buyable.filter(r => (r.listings.category || '').toLowerCase() !== 'food');
+  const foodTotal = foodRows.reduce((s, r) => s + Number(r.listings.price), 0);
+  const itemTotal = itemRows.reduce((s, r) => s + Number(r.listings.price), 0);
+
+  document.getElementById('foodCheckoutBlock').style.display = foodRows.length ? 'block' : 'none';
+  document.getElementById('itemCheckoutBlock').style.display = itemRows.length ? 'block' : 'none';
+  document.getElementById('foodTotal').textContent = window.CP.fmtNaira(foodTotal);
+  document.getElementById('itemTotal').textContent = window.CP.fmtNaira(itemTotal);
   document.getElementById('cartSummary').style.display = 'block';
   updateCartBadge(cartItems.length);
 
@@ -1001,8 +1023,8 @@ function updateCartBadge(count) {
   if (badge) badge.textContent = count;
 }
 
-document.getElementById('checkoutBtn').addEventListener('click', async () => {
-  const sellerIds = [...new Set(cartItems.filter(r => r.listings.is_available).map(r => r.listings.seller_id))];
+document.getElementById('checkoutBtn')?.addEventListener('click', async () => {
+  const sellerIds = [...new Set(cartItems.filter(r => r.listings.is_available && (r.listings.category || '').toLowerCase() !== 'food').map(r => r.listings.seller_id))];
   if (!sellerIds.length) return;
   // Open (or create) a conversation with each seller, then send them to the first one.
   for (const sellerId of sellerIds) {
@@ -1013,6 +1035,50 @@ document.getElementById('checkoutBtn').addEventListener('click', async () => {
     }
   }
   window.location.href = 'notifications.html';
+});
+
+// Food: no chat, no haggling — pay now and it's on its way, one order per vendor.
+document.getElementById('foodPayBtn')?.addEventListener('click', async (e) => {
+  const btn = e.target;
+  const dropoffNote = document.getElementById('foodDropoffNote').value.trim();
+  if (!dropoffNote) { alert('Add a delivery note so the vendor knows where to bring it.'); return; }
+
+  const foodRows = cartItems.filter(r => r.listings.is_available && (r.listings.category || '').toLowerCase() === 'food');
+  if (!foodRows.length) return;
+
+  btn.disabled = true; btn.textContent = 'Getting your location…';
+  navigator.geolocation.getCurrentPosition(async (pos) => {
+    const dropoff_lat = pos.coords.latitude, dropoff_lng = pos.coords.longitude;
+    const { data: { session } } = await window.sb.auth.getSession();
+    const email = session.user.email;
+
+    const vendorIds = [...new Set(foodRows.map(r => r.listings.seller_id))];
+    try {
+      for (const vendorId of vendorIds) {
+        const rows = foodRows.filter(r => r.listings.seller_id === vendorId);
+        const items = rows.map(r => ({ listing_id: r.listings.id, title: r.listings.title, price: Number(r.listings.price), qty: 1 }));
+        const amount_kobo = window.CPPay.nairaToKobo(rows.reduce((s, r) => s + Number(r.listings.price), 0));
+        const commission_kobo = Math.round(amount_kobo * 0.05);
+
+        btn.textContent = 'Opening payment…';
+        const { data: order, error } = await window.sb.from('food_orders').insert({
+          buyer_id: myUserId, seller_id: vendorId, listing_id: rows[0].listings.id, items,
+          amount_kobo, commission_kobo, payout_kobo: amount_kobo - commission_kobo,
+          dropoff_lat, dropoff_lng, dropoff_note: dropoffNote, status: 'awaiting_payment',
+        }).select().single();
+        if (error) throw error;
+
+        await window.CPPay.payFoodOrder({ foodOrderId: order.id, amountKobo: amount_kobo, email });
+        for (const r of rows) await window.sb.from('cart_items').delete().eq('id', r.id);
+      }
+      alert('Order placed! Track it on your food orders page.');
+      window.location.href = 'orders.html';
+    } catch (err) {
+      alert(err.message || 'Payment failed — nothing was charged for the remaining items.');
+    } finally {
+      btn.disabled = false; btn.textContent = 'Order & pay now';
+    }
+  }, () => { alert('Turn on location so the vendor can find you.'); btn.disabled = false; btn.textContent = 'Order & pay now'; });
 });
 
 document.addEventListener('cp-ready', (e) => {

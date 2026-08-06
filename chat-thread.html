@@ -991,6 +991,7 @@ img { max-width: 100%; display: block; }
 
   <div id="threadListingChip"></div>
   <div id="deliveryRow"></div>
+  <div id="escrowBox"></div>
 
   <div class="thread-messages" id="threadMessages">
     <div style="text-align:center;padding:24px;color:var(--text3);font-size:13px;">Loading…</div>
@@ -1006,6 +1007,9 @@ img { max-width: 100%; display: block; }
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script src="https://js.paystack.co/v1/inline.js"></script>
+<script>window.CP_PAYSTACK_PUBLIC_KEY = "pk_test_31d8bf7e2bd93f737dca20a729c2390aa991154c";</script>
+<script src="assets/js/payments.js"></script>
 <script>
 // Shared Supabase client — loaded on every page after the Supabase UMD script.
 // Uses the same project as the React app (public anon key, safe to expose client-side; RLS enforces access).
@@ -1200,7 +1204,7 @@ function renderMessages(messages) {
 
 function renderListingChip(listing) {
   const box = document.getElementById('threadListingChip');
-  if (!listing) { box.innerHTML = ''; document.getElementById('deliveryRow').innerHTML = ''; return; }
+  if (!listing) { box.innerHTML = ''; document.getElementById('deliveryRow').innerHTML = ''; document.getElementById('escrowBox').innerHTML = ''; return; }
 
   const sold = listing.status === 'sold';
   const canRequestDelivery = sold && listing.sold_to === myUserId; // only the buyer who bought it can request delivery
@@ -1208,7 +1212,7 @@ function renderListingChip(listing) {
   box.innerHTML = `
     <div class="thread-listing-chip">
       <a class="info" href="listing.html?id=${listing.id}">🛍️ ${listing.title} · ${window.CP.fmtNaira(listing.price)}</a>
-      ${sold ? `<span class="thread-sold-tag">✅ Sold</span>` : (isSeller ? `<button class="mark-sold-btn" id="markSoldBtn">Mark as sold</button>` : '')}
+      ${sold ? `<span class="thread-sold-tag">✅ Sold</span>` : (isSeller ? `<button class="mark-sold-btn" id="markSoldBtn">Start transaction</button>` : '')}
     </div>
   `;
 
@@ -1222,25 +1226,113 @@ function renderListingChip(listing) {
   }
 
   if (isSeller && !sold) {
-    document.getElementById('markSoldBtn').addEventListener('click', markSold);
+    document.getElementById('markSoldBtn').addEventListener('click', startTransaction);
   }
+  if (sold) renderEscrowBox(listing); else document.getElementById('escrowBox').innerHTML = '';
 }
 
-async function markSold() {
-  if (!confirm(`Mark "${convo.listings.title}" as sold to this buyer?`)) return;
+// Grabs the current device location, wrapped in a confirm() so the person
+// consciously "locks in" that location for the deal — used by both the
+// seller (pickup point) and buyer (dropoff point).
+function lockLocation(promptLabel) {
+  return new Promise((resolve, reject) => {
+    if (!navigator.geolocation) return reject(new Error('Location not supported on this device.'));
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        const { latitude: lat, longitude: lng } = pos.coords;
+        if (!confirm(`${promptLabel}\n\nLock in your current location (${lat.toFixed(5)}, ${lng.toFixed(5)}) for this deal?`)) {
+          return reject(new Error('Location not confirmed'));
+        }
+        resolve({ lat, lng });
+      },
+      () => reject(new Error('Could not get your location — check permissions.'))
+    );
+  });
+}
+
+// Seller taps "Start transaction": locks in the seller's location as the
+// handover point, marks the listing sold to this buyer, and opens an escrow
+// order awaiting the buyer's payment.
+async function startTransaction() {
+  if (!confirm(`Start a transaction for "${convo.listings.title}" with this buyer? You'll be asked to confirm your handover location.`)) return;
+  let loc;
+  try { loc = await lockLocation('This will be shown as the pickup/handover point.'); }
+  catch (e) { alert(e.message); return; }
+
   const { error } = await window.sb.from('listings').update({
     status: 'sold', is_available: false, sold_to: convo.buyer_id, sold_at: new Date().toISOString(),
   }).eq('id', convo.listings.id);
-  if (error) { console.error('Mark sold error:', error); alert('Could not mark as sold — try again.'); return; }
+  if (error) { console.error('Start transaction error:', error); alert('Could not start the transaction — try again.'); return; }
+
+  const amount_kobo = window.CPPay.nairaToKobo(convo.listings.price);
+  const commission_kobo = Math.round(amount_kobo * 0.05);
+  await window.sb.from('escrow_orders').insert({
+    kind: 'item', conversation_id: convo.id, listing_id: convo.listings.id,
+    buyer_id: convo.buyer_id, seller_id: myUserId,
+    amount_kobo, commission_kobo, payout_kobo: amount_kobo - commission_kobo,
+    pickup_lat: loc.lat, pickup_lng: loc.lng, status: 'awaiting_payment',
+  });
 
   await window.sb.from('messages').insert({
     conversation_id: convo.id, sender_id: myUserId,
-    content: `${SYSTEM_PREFIX}✅ Marked as sold`, created_at: new Date().toISOString(),
+    content: `${SYSTEM_PREFIX}✅ Transaction started — location locked in, waiting for payment`, created_at: new Date().toISOString(),
   });
 
   convo.listings.status = 'sold';
   convo.listings.sold_to = convo.buyer_id;
   renderListingChip(convo.listings);
+}
+
+async function renderEscrowBox(listing) {
+  const box = document.getElementById('escrowBox');
+  const { data: escrow } = await window.sb.from('escrow_orders').select('*').eq('listing_id', listing.id).eq('conversation_id', convo.id).order('created_at', { ascending: false }).limit(1).maybeSingle();
+  if (!escrow) { box.innerHTML = ''; return; }
+
+  const isBuyer = myUserId === escrow.buyer_id;
+  let html = '';
+
+  if (escrow.status === 'awaiting_payment') {
+    html = isBuyer
+      ? `<div class="request-delivery-row"><button class="mark-sold-btn" id="payNowBtn">💳 Pay ${window.CP.fmtNaira(listing.price)} to escrow</button></div>`
+      : `<div class="request-delivery-row"><span class="disabled-hint">⏳ Waiting for buyer to pay</span></div>`;
+  } else if (escrow.status === 'paid_escrow') {
+    html = `<div class="request-delivery-row" style="flex-direction:column;align-items:stretch;gap:6px">
+      <span class="disabled-hint">🔒 ${window.CP.fmtNaira(listing.price)} held in escrow</span>
+      ${isBuyer ? `<button class="mark-sold-btn" id="confirmReceivedBtn">✅ Confirm received</button>` : ''}
+      <button class="mark-sold-btn" id="cancelRefundBtn" style="background:var(--danger)">Cancel &amp; refund buyer</button>
+    </div>`;
+  } else if (escrow.status === 'released') {
+    html = `<div class="request-delivery-row"><span class="disabled-hint">✅ Paid out to seller — deal complete</span></div>`;
+  } else if (escrow.status === 'refunded') {
+    html = `<div class="request-delivery-row"><span class="disabled-hint">↩️ Refunded to buyer</span></div>`;
+  }
+  box.innerHTML = html;
+
+  document.getElementById('payNowBtn')?.addEventListener('click', async (e) => {
+    const btn = e.target; btn.disabled = true; btn.textContent = 'Locking in your location…';
+    try {
+      const loc = await lockLocation('This will be shown as your delivery/dropoff point.');
+      await window.sb.from('escrow_orders').update({ dropoff_lat: loc.lat, dropoff_lng: loc.lng }).eq('id', escrow.id);
+      const { data: { session } } = await window.sb.auth.getSession();
+      btn.textContent = 'Opening payment…';
+      await window.CPPay.payEscrowOrder({ escrowOrderId: escrow.id, amountKobo: escrow.amount_kobo, email: session.user.email });
+      renderEscrowBox(listing);
+    } catch (err) { alert(err.message || 'Payment failed'); btn.disabled = false; btn.textContent = `💳 Pay ${window.CP.fmtNaira(listing.price)} to escrow`; }
+  });
+
+  document.getElementById('confirmReceivedBtn')?.addEventListener('click', async (e) => {
+    if (!confirm('Confirm you received the item? This releases payment to the seller.')) return;
+    e.target.disabled = true; e.target.textContent = 'Releasing payment…';
+    try { await window.CPPay.confirmReceived(escrow.id); renderEscrowBox(listing); }
+    catch (err) { alert(err.message || 'Could not release payment'); e.target.disabled = false; }
+  });
+
+  document.getElementById('cancelRefundBtn')?.addEventListener('click', async (e) => {
+    if (!confirm('Cancel this deal and refund the buyer?')) return;
+    e.target.disabled = true; e.target.textContent = 'Refunding…';
+    try { await window.CPPay.cancelAndRefundEscrow(escrow.id); renderEscrowBox(listing); }
+    catch (err) { alert(err.message || 'Refund failed'); e.target.disabled = false; }
+  });
 }
 
 async function loadConversation(userId) {

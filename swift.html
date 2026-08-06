@@ -1074,6 +1074,9 @@ img { max-width: 100%; display: block; }
 </nav>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script src="https://js.paystack.co/v1/inline.js"></script>
+<script>window.CP_PAYSTACK_PUBLIC_KEY = "pk_test_31d8bf7e2bd93f737dca20a729c2390aa991154c";</script>
+<script src="assets/js/payments.js"></script>
 <script>
 // Shared Supabase client — loaded on every page after the Supabase UMD script.
 // Uses the same project as the React app (public anon key, safe to expose client-side; RLS enforces access).
@@ -1599,6 +1602,43 @@ async function loadActiveOrder(userId) {
     return;
   }
 
+  // A runner has claimed the job — buyer must fund escrow before pickup can start.
+  if (data.status === 'accepted') {
+    let { data: escrow } = await window.sb.from('escrow_orders').select('*').eq('swift_order_id', data.id).maybeSingle();
+    if (!escrow) {
+      const amount_kobo = window.CPPay.nairaToKobo(data.fee || 0);
+      const { commission, payout } = { commission: Math.round(amount_kobo * 0.05), payout: amount_kobo - Math.round(amount_kobo * 0.05) };
+      const { data: created } = await window.sb.from('escrow_orders').insert({
+        kind: 'swift', swift_order_id: data.id, buyer_id: userId, seller_id: data.runner_id,
+        amount_kobo, commission_kobo: commission, payout_kobo: payout,
+        pickup_lat: data.pickup_lat, pickup_lng: data.pickup_lng,
+        dropoff_lat: data.dropoff_lat, dropoff_lng: data.dropoff_lng,
+        status: 'awaiting_payment',
+      }).select().single();
+      escrow = created;
+    }
+    if (escrow && escrow.status === 'awaiting_payment') {
+      card.innerHTML = `
+        <div class="swift-status-pill">🛵 Runner assigned</div>
+        <h3>Pay to confirm delivery</h3>
+        <p>${window.CP.fmtNaira(data.fee)} is held safely with us until you confirm delivery — your runner is only paid once the job is done.</p>
+        <button class="form-submit" id="swiftPayBtn">Pay ${window.CP.fmtNaira(data.fee)}</button>
+      `;
+      document.getElementById('swiftPayBtn').addEventListener('click', async () => {
+        const btn = document.getElementById('swiftPayBtn');
+        btn.disabled = true; btn.textContent = 'Opening payment…';
+        try {
+          const { data: { session } } = await window.sb.auth.getSession();
+          await window.CPPay.payEscrowOrder({ escrowOrderId: escrow.id, amountKobo: escrow.amount_kobo, email: session.user.email });
+          loadActiveOrder(userId);
+        } catch (e) {
+          alert(e.message || 'Payment failed'); btn.disabled = false; btn.textContent = `Pay ${window.CP.fmtNaira(data.fee)}`;
+        }
+      });
+      return;
+    }
+  }
+
   card.innerHTML = `
     <div class="swift-status-pill">🛵 ${STATUS_LABEL[data.status] || data.status}</div>
     <h3>${data.pickup_place || data.dropoff_place || 'Your delivery'}</h3>
@@ -1729,6 +1769,16 @@ async function loadRunnerActiveOrder(runner) {
   card.className = 'swift-card';
 
   if (data.status === 'accepted') {
+    const { data: escrow } = await window.sb.from('escrow_orders').select('status').eq('swift_order_id', data.id).maybeSingle();
+    if (!escrow || escrow.status === 'awaiting_payment') {
+      card.innerHTML = `
+        <div class="swift-status-pill">⏳ Waiting on buyer</div>
+        <h3>${data.pickup_place || 'Pickup location'}</h3>
+        <p>The buyer hasn't funded escrow yet — you'll be able to enter the pickup PIN as soon as they pay.</p>
+        ${disputeButton(data.id, myUserId, data.buyer_id)}
+      `;
+      return;
+    }
     card.innerHTML = `
       <div class="swift-status-pill">📍 Heading to pickup</div>
       <h3>${data.pickup_place || 'Pickup location'}</h3>
@@ -1763,10 +1813,17 @@ async function loadRunnerActiveOrder(runner) {
       ${disputeButton(data.id, myUserId, data.buyer_id)}
     `;
     renderMap('runnerMap', data, null);
-    document.getElementById('confirmDeliveryBtn').addEventListener('click', async () => {
+    document.getElementById('confirmDeliveryBtn').addEventListener('click', async (e) => {
       const entered = document.getElementById('deliveryPinInput').value.trim();
       if (String(entered) !== String(data.delivery_pin)) { alert('Wrong delivery PIN.'); return; }
+      e.target.disabled = true; e.target.textContent = 'Releasing payment…';
       await window.sb.from('swift_orders').update({ status: 'delivered', updated_at: new Date().toISOString() }).eq('id', data.id);
+      // Correct PIN = proof of delivery -> auto-release escrow to the runner (minus 5% commission), no buyer tap needed.
+      const { data: escrow } = await window.sb.from('escrow_orders').select('*').eq('swift_order_id', data.id).maybeSingle();
+      if (escrow && escrow.status === 'paid_escrow') {
+        try { await window.CPPay.swiftAutoRelease(escrow.id); }
+        catch (err) { console.error('Auto-payout failed:', err); alert('Delivery confirmed, but payout failed — this order was flagged for manual payout.'); }
+      }
       loadRunnerActiveOrder(runner);
     });
     return;
