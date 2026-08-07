@@ -49,7 +49,7 @@ window.CPPay = (function () {
         callback: (response) => {
           (async () => {
             try {
-              const verify = await post('paystack-verify', { reference: response.reference });
+              const verify = await post('paystack-verify', { reference: response.reference, order_type: orderType, order_id: orderId });
               if (!verify.ok) return reject(new Error('Payment could not be verified'));
               resolve(verify);
             } catch (e) { reject(e); }
