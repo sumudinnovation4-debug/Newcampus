@@ -1,7 +1,16 @@
-// POST { reference }
-// Verifies payment with Paystack (never trust the client), then flips the
+// POST { reference, order_type, order_id }
+// Verifies payment with Paystack (never trust the client on the AMOUNT —
+// that's always re-checked against Paystack's own record), then flips the
 // matching escrow_order/food_order to "paid" — money now sits with the
 // platform until release (confirm-received / Swift PIN / vendor delivered).
+//
+// order_type/order_id come straight from the client instead of being read
+// back out of Paystack's `metadata` field. Paystack's inline popup (opened
+// via PaystackPop.setup + openIframe) doesn't reliably round-trip metadata
+// set during the earlier server-side /transaction/initialize call, so
+// reading it back here was causing "Order not found" even on successful
+// payments. The client already knows exactly which order it's paying for —
+// we just re-verify the amount actually charged before trusting it.
 const { paystack, supabaseAdmin, setCors } = require('./_lib');
 
 module.exports = async (req, res) => {
@@ -10,39 +19,28 @@ module.exports = async (req, res) => {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
   try {
-    const { reference } = req.body;
-    if (!reference) return res.status(400).json({ error: 'Missing reference' });
+    const { reference, order_type, order_id } = req.body;
+    if (!reference || !order_type || !order_id) return res.status(400).json({ error: 'Missing reference/order_type/order_id' });
+    if (!['escrow', 'food'].includes(order_type)) return res.status(400).json({ error: 'Invalid order_type' });
 
     const data = await paystack(`/transaction/verify/${encodeURIComponent(reference)}`);
     if (data.data.status !== 'success') {
       return res.status(200).json({ ok: false, status: data.data.status });
     }
 
-    const { order_type, order_id } = data.data.metadata || {};
-    const amountPaid = data.data.amount; // kobo, confirmed by Paystack
+    const amountPaid = data.data.amount; // kobo, confirmed by Paystack — this is the number we actually trust
     const sb = supabaseAdmin();
+    const table = order_type === 'escrow' ? 'escrow_orders' : 'food_orders';
+    const paidStatus = order_type === 'escrow' ? 'paid_escrow' : 'paid';
 
-    if (order_type === 'escrow') {
-      const { data: order, error } = await sb.from('escrow_orders').select('*').eq('id', order_id).single();
-      if (error || !order) return res.status(404).json({ error: 'Order not found' });
-      if (order.status !== 'awaiting_payment') return res.status(200).json({ ok: true, already: true });
-      if (amountPaid < order.amount_kobo) return res.status(400).json({ error: 'Amount mismatch' });
+    const { data: order, error } = await sb.from(table).select('*').eq('id', order_id).single();
+    if (error || !order) return res.status(404).json({ error: 'Order not found' });
+    if (order.status !== 'awaiting_payment') return res.status(200).json({ ok: true, already: true });
+    if (amountPaid < order.amount_kobo) return res.status(400).json({ error: 'Amount mismatch' });
 
-      await sb.from('escrow_orders').update({
-        status: 'paid_escrow', paystack_reference: reference, updated_at: new Date().toISOString(),
-      }).eq('id', order_id);
-    } else if (order_type === 'food') {
-      const { data: order, error } = await sb.from('food_orders').select('*').eq('id', order_id).single();
-      if (error || !order) return res.status(404).json({ error: 'Order not found' });
-      if (order.status !== 'awaiting_payment') return res.status(200).json({ ok: true, already: true });
-      if (amountPaid < order.amount_kobo) return res.status(400).json({ error: 'Amount mismatch' });
-
-      await sb.from('food_orders').update({
-        status: 'paid', paystack_reference: reference, updated_at: new Date().toISOString(),
-      }).eq('id', order_id);
-    } else {
-      return res.status(400).json({ error: 'Unknown order_type in metadata' });
-    }
+    await sb.from(table).update({
+      status: paidStatus, paystack_reference: reference, updated_at: new Date().toISOString(),
+    }).eq('id', order_id);
 
     return res.status(200).json({ ok: true });
   } catch (err) {
