@@ -111,7 +111,10 @@ window.CP.fmtNaira = (n) => '₦' + Number(n || 0).toLocaleString();
 (async () => {
   const { data: { session } } = await window.sb.auth.getSession();
   if (!session) { window.location.href = 'auth.html'; return; }
-  document.dispatchEvent(new CustomEvent('cp-ready', { detail: { user: session.user } }));
+  // Calling init() directly instead of dispatching a 'cp-ready' event —
+  // events can fire before a listener further down the page has even been
+  // registered yet, silently dropping them. A direct function call can't race.
+  init(session.user);
 })();
 </script>
 <script>
@@ -124,6 +127,10 @@ const BANKS = [
 document.getElementById('bankCode').innerHTML = BANKS.map(([code, name]) => `<option value="${code}">${name}</option>`).join('');
 
 let myUserId = null;
+function init(user) {
+  myUserId = user.id;
+  refreshWallet();
+}
 
 function openModal(id) { document.getElementById(id).classList.add('open'); }
 function closeModal(id) { document.getElementById(id).classList.remove('open'); }
@@ -222,7 +229,7 @@ document.getElementById('withdrawSubmitBtn').addEventListener('click', async (e)
   finally { btn.disabled = false; btn.textContent = 'Withdraw'; }
 });
 
-document.addEventListener('cp-ready', (e) => { myUserId = e.detail.user.id; refreshWallet(); });
+
 </script>
 </body>
 </html>
