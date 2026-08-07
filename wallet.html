@@ -138,18 +138,23 @@ document.getElementById('openBankBtn').addEventListener('click', async () => {
 });
 
 async function refreshWallet() {
-  const balance = await window.CPPay.getWalletBalance(myUserId);
-  document.getElementById('walletBalance').textContent = window.CPPay.fmtNaira(balance);
-
-  const txs = await window.CPPay.getTransactions(myUserId);
   const list = document.getElementById('txList');
-  if (!txs.length) { list.innerHTML = `<p style="color:var(--text3);font-size:13px;">No activity yet.</p>`; return; }
-  list.innerHTML = txs.map(t => `
-    <div class="tx-row">
-      <div><b>${labelFor(t.type)}</b><span class="tx-note">${t.note || ''} · ${window.CP.timeAgoShort ? window.CP.timeAgoShort(t.created_at) : new Date(t.created_at).toLocaleDateString()}</span></div>
-      <span class="tx-amt ${t.amount_kobo >= 0 ? 'pos' : 'neg'}">${t.amount_kobo >= 0 ? '+' : ''}${window.CPPay.fmtNaira(t.amount_kobo)}</span>
-    </div>
-  `).join('');
+  try {
+    const balance = await window.CPPay.getWalletBalance(myUserId);
+    document.getElementById('walletBalance').textContent = window.CPPay.fmtNaira(balance);
+
+    const txs = await window.CPPay.getTransactions(myUserId);
+    if (!txs.length) { list.innerHTML = `<p style="color:var(--text3);font-size:13px;">No activity yet.</p>`; return; }
+    list.innerHTML = txs.map(t => `
+      <div class="tx-row">
+        <div><b>${labelFor(t.type)}</b><span class="tx-note">${t.note || ''} · ${window.CP.timeAgoShort ? window.CP.timeAgoShort(t.created_at) : new Date(t.created_at).toLocaleDateString()}</span></div>
+        <span class="tx-amt ${t.amount_kobo >= 0 ? 'pos' : 'neg'}">${t.amount_kobo >= 0 ? '+' : ''}${window.CPPay.fmtNaira(t.amount_kobo)}</span>
+      </div>
+    `).join('');
+  } catch (err) {
+    console.error('Wallet load error:', err);
+    list.innerHTML = `<p style="color:var(--danger);font-size:13px;">Couldn't load wallet activity: ${err.message}</p>`;
+  }
 }
 function labelFor(type) {
   return { escrow_release: 'Escrow payout', p2p_in: 'Received', p2p_out: 'Sent', withdrawal: 'Withdrawal', commission: 'Commission', refund: 'Refund' }[type] || type;
