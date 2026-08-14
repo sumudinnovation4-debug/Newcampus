@@ -803,6 +803,52 @@ img { max-width: 100%; display: block; }
     <button type="submit" class="form-submit">Confirm &amp; continue</button>
   </form>
 
+  <!-- Step 2: profile picture (optional) -->
+  <div class="auth-view" id="step2" style="display:none;margin-top:24px;text-align:center">
+    <h1 style="font-size:19px">Add a profile picture</h1>
+    <p class="auth-sub">Helps buyers and sellers recognize you. You can skip this and add it later from your profile.</p>
+    <div style="margin:20px 0">
+      <label for="avatarInput" style="cursor:pointer;display:inline-block">
+        <div class="avatar" id="avatarPreview" style="width:100px;height:100px;font-size:32px;margin:0 auto;border:2px dashed var(--border)">+</div>
+      </label>
+      <input type="file" id="avatarInput" accept="image/*" style="display:none">
+    </div>
+    <button type="button" class="form-submit" id="step2Continue">Continue</button>
+    <button type="button" style="display:block;width:100%;text-align:center;background:none;border:none;color:var(--text3);font-size:13px;font-weight:700;margin-top:12px;cursor:pointer" id="step2Skip">Skip for now</button>
+  </div>
+
+  <!-- Step 3: phone number + password (optional, enables phone/email login) -->
+  <div class="auth-view" id="step3" style="display:none;margin-top:24px">
+    <h1 style="font-size:19px">Add a phone number &amp; password</h1>
+    <p class="auth-sub">Optional — lets you log in with your phone or email + a password later, instead of only Google.</p>
+    <div class="form-group">
+      <label class="form-label">Phone number</label>
+      <input class="form-input" type="tel" id="step3Phone" placeholder="080…">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Set a password</label>
+      <input class="form-input" type="password" id="step3Password" placeholder="At least 8 characters">
+    </div>
+    <button type="button" class="form-submit" id="step3Continue">Continue</button>
+    <button type="button" style="display:block;width:100%;text-align:center;background:none;border:none;color:var(--text3);font-size:13px;font-weight:700;margin-top:12px;cursor:pointer" id="step3Skip">Skip for now</button>
+  </div>
+
+  <!-- Step 4: matric number / school email (optional, self-reported) -->
+  <div class="auth-view" id="step4" style="display:none;margin-top:24px">
+    <h1 style="font-size:19px">Verify you're a student</h1>
+    <p class="auth-sub">Optional — add your matric number or school email. This is currently a self-reported field, not a verified guarantee, and helps build trust with other students.</p>
+    <div class="form-group">
+      <label class="form-label">Matric number</label>
+      <input class="form-input" type="text" id="step4Matric" placeholder="e.g. CSC/2021/045">
+    </div>
+    <div class="form-group">
+      <label class="form-label">School email</label>
+      <input class="form-input" type="email" id="step4SchoolEmail" placeholder="you@student.edu.ng">
+    </div>
+    <button type="button" class="form-submit" id="step4Finish">Finish</button>
+    <button type="button" style="display:block;width:100%;text-align:center;background:none;border:none;color:var(--text3);font-size:13px;font-weight:700;margin-top:12px;cursor:pointer" id="step4Skip">Skip for now</button>
+  </div>
+
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
@@ -946,7 +992,142 @@ document.getElementById('onboardingForm').addEventListener('submit', async (e) =
   btn.textContent = 'Confirm & continue';
 
   if (error) { console.error('Onboarding save error:', error); alert('Could not save — please try again.'); return; }
+
+  // Move to the profile-completion steps instead of going straight to home —
+  // these are all skippable, so nobody gets stuck here.
+  document.getElementById('onboardingForm').style.display = 'none';
+  document.getElementById('step2').style.display = 'block';
+});
+
+// ---- Step 2: profile picture (optional) ----
+let pendingAvatarFile = null;
+document.getElementById('avatarInput').addEventListener('change', (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+  pendingAvatarFile = file;
+  const reader = new FileReader();
+  reader.onload = (ev) => {
+    document.getElementById('avatarPreview').innerHTML = `<img src="${ev.target.result}" style="width:100%;height:100%;object-fit:cover">`;
+  };
+  reader.readAsDataURL(file);
+});
+
+async function goToStep3() {
+  document.getElementById('step2').style.display = 'none';
+  document.getElementById('step3').style.display = 'block';
+}
+
+document.getElementById('step2Skip').addEventListener('click', goToStep3);
+document.getElementById('step2Continue').addEventListener('click', async () => {
+  const btn = document.getElementById('step2Continue');
+  if (!pendingAvatarFile) { goToStep3(); return; }
+  btn.disabled = true; btn.textContent = 'Uploading…';
+  try {
+    const { data: { session } } = await window.sb.auth.getSession();
+    const userId = session.user.id;
+    const ext = pendingAvatarFile.name.split('.').pop();
+    const path = `${userId}/avatar.${ext}`;
+    // Requires an "avatars" storage bucket (public) in Supabase — create it once
+    // in the dashboard: Storage -> New bucket -> name "avatars" -> Public.
+    const { error: upErr } = await window.sb.storage.from('avatars').upload(path, pendingAvatarFile, { upsert: true });
+    if (upErr) throw upErr;
+    const { data: pub } = window.sb.storage.from('avatars').getPublicUrl(path);
+    await window.sb.from('profiles').update({ avatar_url: pub.publicUrl }).eq('id', userId);
+  } catch (err) {
+    console.error('Avatar upload error:', err);
+    alert(`Could not upload photo (${err.message}) — you can add it later from your profile.`);
+  } finally {
+    btn.disabled = false; btn.textContent = 'Continue';
+    goToStep3();
+  }
+});
+
+// ---- Step 3: phone + password (optional) ----
+function goToStep4() {
+  document.getElementById('step3').style.display = 'none';
+  document.getElementById('step4').style.display = 'block';
+}
+document.getElementById('step3Skip').addEventListener('click', goToStep4);
+document.getElementById('step3Continue').addEventListener('click', async () => {
+  const phone = document.getElementById('step3Phone').value.trim();
+  const password = document.getElementById('step3Password').value;
+  if (!phone && !password) { goToStep4(); return; }
+  if ((phone && !password) || (password && !phone)) {
+    alert('Enter both a phone number and a password together, or leave both blank to skip.');
+    return;
+  }
+  if (password.length < 8) { alert('Password should be at least 8 characters.'); return; }
+
+  const btn = document.getElementById('step3Continue');
+  btn.disabled = true; btn.textContent = 'Saving…';
+  try {
+    const { data: { session } } = await window.sb.auth.getSession();
+    const userId = session.user.id;
+    const email = session.user.email;
+
+    // This is the key step that makes email+password login work afterwards —
+    // Supabase lets you add a password to an account that was created via
+    // Google, without disturbing the existing Google sign-in.
+    const { error: pwErr } = await window.sb.auth.updateUser({ password });
+    if (pwErr) throw pwErr;
+
+    const { error: profErr } = await window.sb.from('profiles').update({
+      phone_number: phone, email, has_password: true,
+    }).eq('id', userId);
+    if (profErr) throw profErr;
+
+    goToStep4();
+  } catch (err) {
+    console.error('Phone/password save error:', err);
+    alert(`Could not save (${err.message}) — you can set this up later from your profile.`);
+  } finally {
+    btn.disabled = false; btn.textContent = 'Continue';
+  }
+});
+
+// ---- Step 4: matric number / school email (optional, self-reported) ----
+async function finishOnboarding() {
   window.location.href = 'home.html';
+}
+document.getElementById('step4Skip').addEventListener('click', finishOnboarding);
+document.getElementById('step4Finish').addEventListener('click', async () => {
+  const matric = document.getElementById('step4Matric').value.trim();
+  const schoolEmail = document.getElementById('step4SchoolEmail').value.trim();
+  if (!matric && !schoolEmail) { finishOnboarding(); return; }
+
+  const btn = document.getElementById('step4Finish');
+  btn.disabled = true; btn.textContent = 'Saving…';
+  try {
+    const { data: { session } } = await window.sb.auth.getSession();
+    const userId = session.user.id;
+
+    // Light, automatic check only — matches the submitted email's domain
+    // against the university's known domain if one is set. This is NOT proof
+    // of ownership (no inbox verification is wired up), just a plausibility
+    // signal shown to other users.
+    let status = 'unverified';
+    if (schoolEmail) {
+      status = 'pending';
+      const { data: profile } = await window.sb.from('profiles').select('university_id').eq('id', userId).single();
+      if (profile?.university_id) {
+        const { data: uni } = await window.sb.from('universities').select('email_domain').eq('id', profile.university_id).single();
+        if (uni?.email_domain && schoolEmail.toLowerCase().endsWith('@' + uni.email_domain.toLowerCase())) {
+          status = 'domain_matched';
+        }
+      }
+    }
+
+    await window.sb.from('profiles').update({
+      matric_number: matric || null,
+      school_email: schoolEmail || null,
+      school_email_status: status,
+    }).eq('id', userId);
+
+    finishOnboarding();
+  } catch (err) {
+    console.error('Matric/school email save error:', err);
+    finishOnboarding();
+  }
 });
 
 </script>
