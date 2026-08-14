@@ -1075,8 +1075,8 @@ img { max-width: 100%; display: block; }
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script src="https://js.paystack.co/v1/inline.js"></script>
-<script src="config.js"></script>
-<script src="payments.js"></script>
+<script src="config.js?v=2"></script>
+<script src="payments.js?v=2"></script>
 <script>
 // Shared Supabase client — loaded on every page after the Supabase UMD script.
 // Uses the same project as the React app (public anon key, safe to expose client-side; RLS enforces access).
@@ -1087,7 +1087,7 @@ window.sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 // Shared select strings — mirrors src/lib/listings.js and src/lib/posts.js
 window.CP = window.CP || {};
-window.CP.LISTING_SELECT = '*, profiles:profiles!listings_seller_id_fkey(id, username, full_name, avatar_url, is_verified)';
+window.CP.LISTING_SELECT = '*, profiles:profiles!listings_seller_id_fkey(id, username, full_name, avatar_url, is_verified, rating)';
 window.CP.POST_SELECT = '*, profiles!posts_author_id_fkey(id, username, full_name, avatar_url, is_hub, is_hub_service)';
 
 window.CP.fmtNaira = (n) => '₦' + Number(n || 0).toLocaleString();

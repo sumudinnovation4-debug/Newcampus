@@ -287,6 +287,16 @@ img { max-width: 100%; display: block; }
   background: linear-gradient(135deg, var(--brand), var(--brand-dark));
 }
 .store-seller-name { font-size: 11px; color: var(--text3); font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.store-badge { position: absolute; font-size: 9.5px; font-weight: 800; padding: 3px 7px; border-radius: 6px; color: #fff; letter-spacing: .3px; }
+.store-badge.sold { top: 8px; left: 8px; background: rgba(9,7,20,.75); }
+.store-badge.new { top: 8px; left: 8px; background: #16A34A; }
+.store-cat-chip {
+  position: absolute; bottom: 8px; left: 8px;
+  background: rgba(9,7,20,.55); color: #fff; font-size: 9.5px; font-weight: 700;
+  padding: 3px 8px; border-radius: 20px; backdrop-filter: blur(4px); text-transform: capitalize;
+}
+.store-rating { font-size: 11px; font-weight: 700; color: #F59E0B; flex-shrink: 0; }
+.store-verified { color: var(--brand); font-weight: 800; }
 
 /* ===== Bottom nav ===== */
 .cp-bottom-nav {
@@ -980,7 +990,7 @@ window.sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 // Shared select strings — mirrors src/lib/listings.js and src/lib/posts.js
 window.CP = window.CP || {};
-window.CP.LISTING_SELECT = '*, profiles:profiles!listings_seller_id_fkey(id, username, full_name, avatar_url, is_verified)';
+window.CP.LISTING_SELECT = '*, profiles:profiles!listings_seller_id_fkey(id, username, full_name, avatar_url, is_verified, rating)';
 window.CP.POST_SELECT = '*, profiles!posts_author_id_fkey(id, username, full_name, avatar_url, is_hub, is_hub_service)';
 
 window.CP.fmtNaira = (n) => '₦' + Number(n || 0).toLocaleString();
@@ -1065,10 +1075,16 @@ function renderCard(item, i) {
   const emoji = CATEGORY_EMOJI[(item.category || '').toLowerCase()] || '🛍';
   const seller = item.profiles?.full_name || item.profiles?.username || 'Camplugie seller';
   const media = item.media_urls?.[0];
+  const isSold = item.status === 'sold';
+  const isNew = !isSold && item.created_at && (Date.now() - new Date(item.created_at).getTime()) < 3 * 24 * 60 * 60 * 1000;
+  const rating = item.profiles?.rating;
+  const isVerified = item.profiles?.is_verified;
   return `
     <button class="store-card" data-id="${item.id}">
       <div class="store-card-media" style="background:${bg}">
         ${media ? `<img src="${media}" alt="" style="width:100%;height:100%;object-fit:cover">` : emoji}
+        ${isSold ? `<span class="store-badge sold">SOLD</span>` : isNew ? `<span class="store-badge new">NEW</span>` : ''}
+        <span class="store-cat-chip">${emoji} ${item.category || 'General'}</span>
         <span class="store-like" role="button" aria-label="Save">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.6l-1-1a5.5 5.5 0 0 0-7.8 7.8l1 1L12 21l7.8-7.6 1-1a5.5 5.5 0 0 0 0-7.8z"/></svg>
         </span>
@@ -1077,8 +1093,9 @@ function renderCard(item, i) {
         <div class="store-price">${window.CP.fmtNaira(item.price)}</div>
         <div class="store-title">${item.title}</div>
         <div class="store-seller">
+          ${rating ? `<span class="store-rating">★ ${Number(rating).toFixed(1)}</span>` : ''}
           <span class="store-av"></span>
-          <span class="store-seller-name">${seller}</span>
+          <span class="store-seller-name">${seller}${isVerified ? ' <span class="store-verified">✓</span>' : ''}</span>
         </div>
       </div>
     </button>

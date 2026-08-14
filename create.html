@@ -1186,7 +1186,7 @@ window.sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 // Shared select strings — mirrors src/lib/listings.js and src/lib/posts.js
 window.CP = window.CP || {};
-window.CP.LISTING_SELECT = '*, profiles:profiles!listings_seller_id_fkey(id, username, full_name, avatar_url, is_verified)';
+window.CP.LISTING_SELECT = '*, profiles:profiles!listings_seller_id_fkey(id, username, full_name, avatar_url, is_verified, rating)';
 window.CP.POST_SELECT = '*, profiles!posts_author_id_fkey(id, username, full_name, avatar_url, is_hub, is_hub_service)';
 
 window.CP.fmtNaira = (n) => '₦' + Number(n || 0).toLocaleString();
@@ -1498,11 +1498,7 @@ document.getElementById('listingForm').addEventListener('submit', async (e) => {
   submitBtn.disabled = false;
   submitBtn.textContent = 'Post listing';
 
-  if (error) {
-    console.error('Listing create error:', error);
-    alert(`Could not post your listing:\n\n${error.message || 'Unknown error'}${error.code ? `\n(code: ${error.code})` : ''}${error.details ? `\n${error.details}` : ''}`);
-    return;
-  }
+  if (error) { console.error('Listing create error:', error); alert('Could not post your listing — please try again.'); return; }
   window.location.href = 'home.html';
 });
 
