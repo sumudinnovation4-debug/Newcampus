@@ -15,7 +15,8 @@ module.exports = async (req, res) => {
     const table = order_type === 'escrow' ? 'escrow_orders' : 'food_orders';
 
     const { data: order, error } = await sb.from(table).select('*').eq('id', order_id).single();
-    if (error || !order) return res.status(404).json({ error: 'Order not found' });
+    if (error) return res.status(500).json({ error: `Database error looking up order: ${error.message}` });
+    if (!order) return res.status(404).json({ error: `Order not found (id ${order_id}) — this usually means the API function's SUPABASE_URL/SUPABASE_SERVICE_ROLE_KEY point to a different Supabase project than the one the app writes to.` });
     if (!['paid_escrow', 'paid'].includes(order.status)) {
       return res.status(400).json({ error: `Cannot refund an order in status "${order.status}"` });
     }
