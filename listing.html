@@ -1012,6 +1012,8 @@ async function orderFoodNow(btn, buyerId, item, getQty) {
         dropoff_lat, dropoff_lng, dropoff_note: dropoffNote, status: 'awaiting_payment',
       }).select().single();
       if (error) throw error;
+      // TEMP DEBUG — remove once the "Order not found" bug is confirmed fixed.
+      alert(`DEBUG: inserted order id = ${order?.id ?? 'MISSING'} | full row: ${JSON.stringify(order)}`);
 
       await window.CPPay.payFoodOrder({ foodOrderId: order.id, amountKobo: amount_kobo, email });
       alert('Order placed! Track it on your food orders page.');
