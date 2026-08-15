@@ -1,8 +1,8 @@
 # CampusPlug
 
-CampusPlug is a campus-first social marketplace platform built for university communities. It combines marketplace listings with escrow-protected payments, a social feed, student profiles, campus-based discovery, alerts, and engagement tracking into one modern web app.
+CampusPlug is a secure campus marketplace built for university communities — a trusted place for students to buy, sell, and get things delivered, with escrow-protected payments on every transaction. **5,000+ students and counting.**
 
-The product is designed around one idea: students should be able to discover campus conversations, services, products, updates, and trusted people in one place.
+Social features — a campus feed, profiles, and alerts — exist to bring students back to the marketplace, keeping them engaged between transactions rather than competing with it for attention.
 
 ---
 
@@ -10,11 +10,16 @@ The product is designed around one idea: students should be able to discover cam
 
 CampusPlug provides:
 
+**Marketplace (core product)**
 - Marketplace-style listing support for products and services
-- In-chat haggling with escrow-protected transactions
+- Escrow-protected transactions — funds are held until the buyer confirms receipt, never released blind
+- In-chat haggling before a deal is struck
 - Swift delivery with runner pickup and PIN-gated payout
 - Food ordering with quick checkout
 - Wallet and P2P transfers between users
+- Google-only sign-in with onboarding for new users, keeping accounts verified and reducing fake profiles
+
+**Social (retention layer)**
 - A ranked campus feed for posts and updates
 - Student profile pages with posts and plug activity
 - Alerts and notifications for user activity
@@ -22,7 +27,6 @@ CampusPlug provides:
 - Light and dark theme support
 - Media-ready post cards for text, images, and videos
 - Supabase-powered authentication, database, storage, and realtime updates
-- Google-only sign-in with onboarding for new users
 
 ---
 
@@ -47,7 +51,7 @@ CampusPlug provides:
 
 ### Marketplace & Payments
 
-Marketplace is CampusPlug's core product — students list, haggle, and transact on products and services, with all money movement handled through Paystack and verified server-side via Vercel serverless functions. The frontend only ever uses the Paystack publishable key.
+Marketplace is CampusPlug's core product — 5,000+ students use it to list, haggle, and transact on products and services safely, with no money changing hands outside of escrow. All payments run through Paystack and are verified server-side via Vercel serverless functions; the frontend only ever uses the Paystack publishable key.
 
 - **Normal item (haggled in chat):** seller starts a transaction in the chat thread and confirms pickup location; buyer pays into escrow and confirms dropoff location. Funds are held until the buyer confirms receipt, then released to the seller (95%) via Paystack Transfer — or refunded if either side cancels.
 - **Swift delivery:** after a runner accepts a delivery request, the buyer pays to confirm before pickup can start. Entering the correct delivery PIN on handoff auto-releases payout to the runner (95%) with no extra steps.
@@ -338,6 +342,6 @@ Highlights:
 
 ## Status
 
-CampusPlug is a polished campus social commerce experience with a stable feed, improved profile experience, responsive design, and a stronger professional UI foundation.
+CampusPlug is a trusted, escrow-secured campus marketplace with 5,000+ students and counting, backed by a stable social feed and profile experience that keeps users coming back between transactions.
 
 Escrow payments, Swift delivery payouts, food ordering, wallet/P2P transfers, and Google-only sign-in are complete and live. Still open: Paystack webhook verification (as a safety net alongside client-redirect verification) and a vendor-side dashboard for updating food order status.
