@@ -14,6 +14,20 @@ module.exports = async (req, res) => {
     SUPABASE_SERVICE_ROLE_KEY_set: !!process.env.SUPABASE_SERVICE_ROLE_KEY,
   };
 
+  // Decode (not verify) the JWT payload to see what role it actually claims —
+  // this settles definitively whether the anon key got pasted in by mistake,
+  // without depending on any query that could look fine for other reasons.
+  if (process.env.SUPABASE_SERVICE_ROLE_KEY) {
+    try {
+      const parts = process.env.SUPABASE_SERVICE_ROLE_KEY.split('.');
+      const payload = JSON.parse(Buffer.from(parts[1], 'base64').toString('utf8'));
+      report.SUPABASE_SERVICE_ROLE_KEY_decoded_role = payload.role || '(no role claim found)';
+      report.SUPABASE_SERVICE_ROLE_KEY_project_ref = payload.ref || '(no ref claim found)';
+    } catch (e) {
+      report.SUPABASE_SERVICE_ROLE_KEY_decoded_role = `Could not decode as a JWT: ${e.message}`;
+    }
+  }
+
   if (!report.SUPABASE_URL_set || !report.SUPABASE_SERVICE_ROLE_KEY_set) {
     return res.status(200).json({ ...report, connection_test: 'skipped — env vars missing' });
   }
